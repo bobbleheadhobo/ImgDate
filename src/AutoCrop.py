@@ -53,7 +53,7 @@ class AutoCrop:
                 continue
 
             # Draw the rotated rectangle for preview
-            cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 20)
+            cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)
 
             # Extract the rotated rectangle
             cropped = self.crop_rotated_rectangle(image, rect)
@@ -61,9 +61,9 @@ class AutoCrop:
             if cropped.size > 0:
                 cropped_images.append(cropped)
 
-        # Preview the detected contours
-        # self.preview_detected_contours(preview_image)
-        cv2.imwrite(f"img/processed/image{random.randint(1,100)}.jpg", preview_image)
+
+        # debug save the detected contours for cropping
+        # cv2.imwrite(f"img/processed/image{random.randint(1,100)}.jpg", preview_image)
 
 
         return cropped_images
