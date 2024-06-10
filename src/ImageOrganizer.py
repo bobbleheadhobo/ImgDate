@@ -4,26 +4,31 @@ from AutoCrop import AutoCrop
 import cv2
 import random
 import piexif
+import calendar
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 from DateExtractor import DateExtractor
 
 class ImageOrganizer:
-    def __init__(self, folder_path, save_path):
-        self.folder_path = folder_path
+    def __init__(self, scans_path, save_path, error_path):
+        self.scans_path = scans_path
         self.save_path = save_path
+        self.error_path = error_path
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
+        if not os.path.exists(error_path):
+            os.makedirs(error_path)
+
     def process_images(self):
-        image_files = self.get_image_files()
+        scan_file_paths = self.get_scan_file_paths()
 
         # Process images in parallel
         with ThreadPoolExecutor() as executor:
-            results = list(executor.map(self.process_single_image, image_files))
+            results = list(executor.map(self.process_single_image, scan_file_paths))
         
         # Flatten the list of lists and save images
         for idx, cropped_images in enumerate(results):
@@ -32,17 +37,21 @@ class ImageOrganizer:
                     # filename = f'{self.save_path}/cropped_image_{idx}_{i}.jpg'
                     # cv2.imwrite(filename, img)
                     # print(f"Saved: {filename}")
-                    # date = self.date_extractor.extract_and_validate_date(img)
-                    date = "12/07/2001"
-                    self.update_image_metadata(img, date)
+                    date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    # date = "12/07/2001"
+                    # confidence = 9
+                    if date:
+                        img = self.update_image_metadata(img, date)
+
+                    self.save_image(img, date, confidence)
 
 
 
-    def get_image_files(self):
+    def get_scan_file_paths(self):
         image_files = []
-        for file in os.listdir(self.folder_path):
+        for file in os.listdir(self.scans_path):
             if file.endswith(".jpg"):
-                image_files.append(os.path.join(self.folder_path, file))
+                image_files.append(os.path.join(self.scans_path, file))
         return image_files
 
     def process_single_image(self, image_path):
@@ -60,10 +69,10 @@ class ImageOrganizer:
         # Convert the date to EXIF format "YYYY:MM:DD HH:MM:SS"
         try:
             month, day, year = date.split('/')
-            date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 00:00:00"  # Padding month and day with zeros
+            date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 12:00:00"  # Padding month and day with zeros
         except ValueError:
             print(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
-            return
+            return None
 
         # Save to a BytesIO stream to keep it in memory
         with io.BytesIO() as output:
@@ -84,25 +93,71 @@ class ImageOrganizer:
             pil_img.save(updated_output, format="JPEG", exif=exif_bytes)
             updated_image_bytes = updated_output.getvalue()
 
-        # Optionally, write the updated image back to disk
-        updated_image_path = f"../img/processed/updated_image{random.randint(10,1000)}.jpg"
-        with open(updated_image_path, 'wb') as file:
-            file.write(updated_image_bytes)
+        print(f"Updated image exif date: {date}")
 
-        print(f"Updated image saved with date {date} to {updated_image_path}")
+        return updated_image_bytes
+    
+    def save_image(self, img, date, confidence):
+        """
+        Save the image with the extracted date in the filename.
+        """
+        # Generate a random number to avoid overwriting existing files
+        random_number = random.randint(1000, 9999)
 
+        if date:
+            # Get the year and month from the date
+            month, _, year = date.split('/')
+
+            month_name = calendar.month_name[int(month)]
+
+            # Create the year folder if it doesn't exist
+            year_folder = os.path.join(self.save_path, year)
+            if not os.path.exists(year_folder):
+                os.makedirs(year_folder)
+
+            # Create the month folder if it doesn't exist
+            month_folder = os.path.join(year_folder, month_name)
+            if not os.path.exists(month_folder):
+                os.makedirs(month_folder)
+
+            if confidence < 9:
+                # Likely incorrect date
+                filename = rf"{self.save_path}\Failed\date_{date.replace('/', '-')}_confidence-{confidence}_{random_number}.jpg"
+            else:
+                filename = rf"{self.save_path}\{year}\{month_name}\date_{date.replace('/', '-')}_{random_number}.jpg"
+
+        else:
+            # No date found
+            filename = rf"{self.save_path}\Failed\date_not_found_{random_number}.jpg"
+
+        with open(filename, 'wb') as f:
+            f.write(img)
+
+        # Verify if the file was saved
+        if os.path.exists(filename):
+            print(f"Saved image with date {date} to {filename}")
+        else:
+            print(f"Error saving image with date {date} to {filename}")
 
 if __name__ == "__main__":
     # Example usage
-    folder_path = r"..\img\test\New folder"
+    scans_path = r"..\img\test\New folder"
     save_path = r"..\img\processed"
+    error_path = rf"{save_path}\Failed"
 
-    # Delete files in save path folder
-    file_list = os.listdir(save_path)
-    for file_name in file_list:
-        file_path = os.path.join(save_path, file_name)
-        if os.path.isfile(file_path):
+    # Delete files and folders in save path directory recursively
+    for root, dirs, files in os.walk(save_path):
+        for file in files:
+            file_path = os.path.join(root, file)
             os.remove(file_path)
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            os.rmdir(dir_path)
+    # file_list = os.listdir(save_path)
+    # for file_name in file_list:
+    #     file_path = os.path.join(save_path, file_name)
+    #     if os.path.isfile(file_path):
+    #         os.remove(file_path)
 
-    image_organizer = ImageOrganizer(folder_path, save_path)
+    image_organizer = ImageOrganizer(scans_path, save_path, error_path)
     image_organizer.process_images()

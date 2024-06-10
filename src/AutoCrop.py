@@ -14,7 +14,6 @@ class AutoCrop:
             print(f"Error: Could not load image {image_path}")
             return []
 
-        original_image = image.copy()  # Keep a copy of the original image for previewing
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Define the range for the background color (near white)
@@ -37,7 +36,6 @@ class AutoCrop:
 
         cv2.imwrite(f"img/processed/mask{random.randint(1,100)}.jpg", morph)
 
-
         cropped_images = []
         preview_image = image.copy()
 
@@ -52,8 +50,8 @@ class AutoCrop:
             if area < 1000000 or area > 9000000:
                 continue
 
-            # Draw the rotated rectangle for preview
-            cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)
+            # Debug draw the rotated rectangle for preview
+            # cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)
 
             # Extract the rotated rectangle
             cropped = self.crop_rotated_rectangle(image, rect)
@@ -61,10 +59,10 @@ class AutoCrop:
             if cropped.size > 0:
                 cropped_images.append(cropped)
 
-
         # debug save the detected contours for cropping
         # cv2.imwrite(f"img/processed/image{random.randint(1,100)}.jpg", preview_image)
 
+        print(f"Detected {len(cropped_images)} images.")
 
         return cropped_images
 
@@ -92,7 +90,17 @@ class AutoCrop:
 
         final_cropped = self.remove_border(cropped, expand_by)
 
+        # Adjust orientation to landscape
+        final_cropped = self.ensure_landscape(final_cropped)
+
         return final_cropped
+
+    def ensure_landscape(self, image):
+        height, width = image.shape[:2]
+        if height > width:
+            # Rotate 90 degrees clockwise to switch to landscape
+            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        return image
     
     def remove_border(self, image, border_size):
         # Remove the border by slicing off the edges

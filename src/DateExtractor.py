@@ -62,7 +62,7 @@ class DateExtractor:
             "content": [
                 {
                 "type": "text",
-                "text": "This is a film image that likely contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with \"01 01 \'59 | confidence: -1\" as a placeholder."
+                "text": "This is a film image that likely contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with \"01 01 \'85 | confidence: -1\" as a placeholder."
                 },
                 {
                 "type": "image_url",
@@ -81,7 +81,10 @@ class DateExtractor:
 
         extracted_date = response.json()["choices"][0]["message"]["content"]
 
-        return extracted_date
+        extracted_date = extracted_date.split("|")[0].strip()
+        confidence = extracted_date.split("|")[1].strip().replace("confidence: ", "")
+
+        return extracted_date, confidence
 
    
 
@@ -97,18 +100,27 @@ class DateExtractor:
         
         if match:
             month, day, year = match.groups()
-            print(f"{month.zfill(2)}/{day.zfill(2)}/{year}")
 
 
             # check century
-            current_year = str(datetime.datetime.now().year)
-            current_year = current_year[-2:]
+            current_year_full = str(datetime.datetime.now().year)
+            current_year = current_year_full[-2:]
             if int(year) > int(current_year):
                 year = "19" + year
             else:
                 year = "20" + year
 
-            print(f"After century check: {month.zfill(2)}/{day.zfill(2)}/{year}")
+            # Validate the date
+            if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:
+                print("Invalid date detected.")
+                return None
+            
+            # checks for placeholder date when not found
+            if month == "01" or day == "01" or year == "1985":
+                print("Date not found in image")
+                return None
+
+            print(f"Extracted date: {month}/{day}/{year}")
             return f"{month.zfill(2)}/{day.zfill(2)}/{year}"
         else:
             print("No valid date found in the text.")
@@ -122,15 +134,15 @@ class DateExtractor:
         cropped_img = self.crop_date_64(img)
         
         # Extract text using Google Vision
-        extracted_date = self.read_date(cropped_img)
+        extracted_date, confidence = self.read_date(cropped_img)
         
         if extracted_date:
             # Validate the extracted text as a date
             valid_date = self.validate_date_format(extracted_date)
-            return valid_date
+            return valid_date, confidence
         else:
             print("No text extracted from the image.")
-            return None
+            return None, -1
 
 
 
