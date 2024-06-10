@@ -35,9 +35,9 @@ class DateExtractor:
 
         _, buffer = cv2.imencode('.jpg', cropped_img)
 
-        # Optional: Save the processed image for debugging
-        processed_image_path = f"../img/processed/date{random.randint(1, 100)}.jpg"
-        cv2.imwrite(processed_image_path, cropped_img)
+        # # Debug Optional: Save the processed image for debugging
+        # processed_image_path = f"../img/processed/date{random.randint(1, 100)}.jpg"
+        # cv2.imwrite(processed_image_path, cropped_img)
 
         # Convert the cropped image to base64
         base64_img = base64.b64encode(buffer).decode('utf-8')
@@ -81,9 +81,9 @@ class DateExtractor:
 
         extracted_date = response.json()["choices"][0]["message"]["content"]
 
-        extracted_date = extracted_date.split("|")[0].strip()
-        confidence = extracted_date.split("|")[1].strip().replace("confidence: ", "")
-
+        extracted_date = extracted_date.split("|")
+        confidence = extracted_date[1].strip().replace("confidence: ", "")
+        extracted_date = extracted_date[0].strip()
         return extracted_date, confidence
 
    
@@ -120,7 +120,6 @@ class DateExtractor:
                 print("Date not found in image")
                 return None
 
-            print(f"Extracted date: {month}/{day}/{year}")
             return f"{month.zfill(2)}/{day.zfill(2)}/{year}"
         else:
             print("No valid date found in the text.")
@@ -139,9 +138,10 @@ class DateExtractor:
         if extracted_date:
             # Validate the extracted text as a date
             valid_date = self.validate_date_format(extracted_date)
-            return valid_date, confidence
+            print(f"Extracted date: {valid_date} | Confidence: {confidence}")
+            return valid_date, int(confidence)
         else:
-            print("No text extracted from the image.")
+            print("!!No date extracted from the image.")
             return None, -1
 
 
