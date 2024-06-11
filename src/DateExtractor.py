@@ -22,7 +22,7 @@ class DateExtractor:
         load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
 
-    def crop_date_64(self, img):
+    def crop_date_64(self, img, base_64 = True):
         """
         Crop the bottom right corner of the image where the date is located.
         Converts to base64 and returns the cropped image.
@@ -32,17 +32,18 @@ class DateExtractor:
         # cv2.rectangle(img, (int(w*self.crop_width), int(h*self.crop_height)), (w, h), (0, 255, 0), 5)
         cropped_img = img[int(h*self.crop_height):h, int(w*self.crop_width):w]
         
+        if base_64:
+            _, buffer = cv2.imencode('.jpg', cropped_img)
 
-        _, buffer = cv2.imencode('.jpg', cropped_img)
+
+            # Convert the cropped image to base64
+            cropped_img = base64.b64encode(buffer).decode('utf-8')
 
         # # Debug Optional: Save the processed image for debugging
-        # processed_image_path = f"../img/processed/date{random.randint(1, 100)}.jpg"
-        # cv2.imwrite(processed_image_path, cropped_img)
+        cv2.imwrite(f"../img/processed/date_{random.randint(1, 100)}.jpg", cropped_img)
 
-        # Convert the cropped image to base64
-        base64_img = base64.b64encode(buffer).decode('utf-8')
-
-        return base64_img
+        # return base64_img
+        return cropped_img
 
     def read_date(self, base64_image):
         """
@@ -92,8 +93,9 @@ class DateExtractor:
         """
         Validate the extracted text to see if it matches the date format mm dd 'yy.
         """
+        print(f"Extracted text: {text}")
         # Define the regex pattern for the date format mm dd 'yy
-        pattern = r'(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ]\'(\d{2})'
+        pattern = r'(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ]\'*(\d{2,4})'
         
         # Search for the pattern in the extracted text
         match = re.search(pattern, text)
@@ -104,11 +106,13 @@ class DateExtractor:
 
             # check century
             current_year_full = str(datetime.datetime.now().year)
-            current_year = current_year_full[-2:]
-            if int(year) > int(current_year):
-                year = "19" + year
-            else:
-                year = "20" + year
+
+            if len(year) == 2:
+                current_year = current_year_full[-2:]
+                if int(year) > int(current_year):
+                    year = "19" + year
+                else:
+                    year = "20" + year
 
             # Validate the date
             if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:

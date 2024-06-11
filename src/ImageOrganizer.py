@@ -11,7 +11,7 @@ from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
 
 class ImageOrganizer:
-    def __init__(self, scans_path, save_path, error_path):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -39,8 +39,9 @@ class ImageOrganizer:
             if cropped_images:
                 for i, img in enumerate(cropped_images):
                     filename = f'{self.save_path}/cropped_image_{self.current_image}.jpg'
-                    cv2.imwrite(filename, img)
-                    date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    # cv2.imwrite(filename, img)
+                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    date = "01/01/1985"; confidence = random.randint(-1, 20)
 
                     if date is not None and confidence >= 0:
                         img = self.update_image_metadata(img, date)
@@ -167,6 +168,89 @@ class ImageOrganizer:
         else:
             print(f"Error saving image to {filename}")
 
+
+    def manually_set_date_for_failed_images(self):
+        failed_path = os.path.join(self.save_path, "Failed")
+        failed_images = [os.path.join(failed_path, file) for file in os.listdir(failed_path) if file.endswith(".jpg")]
+        
+        def draw_text_box(img, text, pos=(50, 50), box_size=(300, 50), font_scale=1, thickness=2):
+            x, y = pos
+            cv2.rectangle(img, (x, y), (x + box_size[0], y + box_size[1]), (255, 255, 255), -1)
+            cv2.putText(img, text, (x + 5, y + box_size[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
+
+        def get_date_input(img, img_path):
+            temp_img = img.copy()
+            filename = os.path.basename(img_path)
+            draw_text_box(temp_img, f"Filename: {filename}", (10, 10), (temp_img.shape[1] - 20, 40))
+            draw_text_box(temp_img, "Enter date (mm/dd/yyyy):", (10, 60), (temp_img.shape[1] - 20, 40))
+            date_input = ""
+
+            while True:
+                display_img = temp_img.copy()
+                draw_text_box(display_img, date_input, (10, 110), (temp_img.shape[1] - 20, 40))
+                cv2.imshow("Failed Image", display_img)
+                key = cv2.waitKey(100)
+
+                if key == 13:  # Enter key
+                    break
+                elif key == 8:  # Backspace key
+                    date_input = date_input[:-1]
+                elif 32 <= key <= 126:  # Printable characters
+                    date_input += chr(key)
+            
+            return date_input
+
+        for img_path in failed_images:
+            img = cv2.imread(img_path)
+            if img is None:
+                print(f"Failed to load image: {img_path}")
+                continue
+
+            # Resize the image to fit the screen
+            screen_res = 800, 600
+            scale_width = screen_res[0] / img.shape[1]
+            scale_height = screen_res[1] / img.shape[0]
+            scale = min(scale_width, scale_height)
+            window_width = int(img.shape[1] * scale)
+            window_height = int(img.shape[0] * scale)
+            resized_img = cv2.resize(img, (window_width, window_height))
+
+            # Get date input from user
+            date = get_date_input(resized_img, img_path)
+
+            try:
+                # Validate the date format
+                month, day, year = date.split('/')
+                assert len(month) == 2 and len(day) == 2 and len(year) == 4
+                date_formatted = f"{month}/{day}/{year}"
+            except (ValueError, AssertionError):
+                print("Invalid date format. Skipping this image.")
+                cv2.destroyWindow("Failed Image")
+                continue
+
+            # Update image metadata
+            updated_img_bytes = self.update_image_metadata(img, date_formatted)
+            if updated_img_bytes is not None:
+                updated_img_array = np.frombuffer(updated_img_bytes, dtype=np.uint8)
+                updated_img = cv2.imdecode(updated_img_array, cv2.IMREAD_COLOR)
+                if updated_img is None:
+                    print(f"Failed to decode updated image bytes for: {img_path}")
+                    cv2.destroyWindow("Failed Image")
+                    continue
+
+                # Generate new filename
+                confidence = 9  # Manually set high confidence since user is providing the date
+                filename = self.generate_filename(date_formatted, confidence)
+
+                # Save the updated image
+                self.save_file(updated_img, filename)
+
+                # Remove the old failed image
+                os.remove(img_path)
+                print(f"Updated and saved image with new date: {filename}")
+
+            cv2.destroyWindow("Failed Image")
+
 if __name__ == "__main__":
     # Example usage
     scans_path = r"..\img\test"
@@ -179,3 +263,4 @@ if __name__ == "__main__":
 
     image_organizer = ImageOrganizer(scans_path, save_path, error_path)
     image_organizer.process_images()
+    # image_organizer.manually_set_date_for_failed_images()

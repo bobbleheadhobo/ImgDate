@@ -34,7 +34,11 @@ class AutoCrop:
         # Find contours on the cleaned mask
         contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        cv2.imwrite(f"img/processed/mask{random.randint(1,100)}.jpg", morph)
+        
+        # Create the directory if it doesn't exist
+        
+        # Save the image
+        cv2.imwrite(f"../img/processed/mask_{random.randint(1,100)}.jpg", morph)
 
         cropped_images = []
         preview_image = image.copy()
@@ -51,7 +55,7 @@ class AutoCrop:
                 continue
 
             # Debug draw the rotated rectangle for preview
-            # cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)
+            cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 20)
 
             # Extract the rotated rectangle
             cropped = self.crop_rotated_rectangle(image, rect)
@@ -60,7 +64,7 @@ class AutoCrop:
                 cropped_images.append(cropped)
 
         # debug save the detected contours for cropping
-        # cv2.imwrite(f"img/processed/image{random.randint(1,100)}.jpg", preview_image)
+        cv2.imwrite(f"../img/processed/contours_{random.randint(1,100)}.jpg", preview_image)
 
         print(f"Detected {len(cropped_images)} images.")
 
