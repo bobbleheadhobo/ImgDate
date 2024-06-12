@@ -1,3 +1,4 @@
+import datetime
 import io
 import os
 import shutil
@@ -7,6 +8,8 @@ import random
 import piexif
 import calendar
 from concurrent.futures import ThreadPoolExecutor
+from PIL import Image
+import pyexiv2
 from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
 
@@ -16,7 +19,7 @@ class ImageOrganizer:
         self.save_path = save_path
         self.error_path = error_path
         self.num_images = 0
-        self.current_image = 0
+        self.current_image_num = 0
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
 
@@ -38,13 +41,11 @@ class ImageOrganizer:
         for idx, cropped_images in enumerate(results):
             if cropped_images:
                 for i, img in enumerate(cropped_images):
-                    filename = f'{self.save_path}/cropped_image_{self.current_image}.jpg'
+                    filename = f'{self.save_path}/cropped_image_{self.current_image_num}.jpg'
                     # cv2.imwrite(filename, img)
                     # date, confidence = self.date_extractor.extract_and_validate_date(img)
                     date = "01/01/1985"; confidence = random.randint(-1, 20)
 
-                    if date is not None and confidence >= 0:
-                        img = self.update_image_metadata(img, date)
                     self.save_image(img, date, confidence)
 
     def get_scan_file_paths(self):
@@ -60,49 +61,81 @@ class ImageOrganizer:
         self.num_images += len(cropped_images)
         return cropped_images
     
-    def update_image_metadata(self, img, date):
+    def update_metadata_and_save(self, img, date, filename):
         """
-        Update the image metadata with the extracted date in the format mm/dd/yyyy.
+        Update the image metadata with the extracted date in the format mm/dd/yyyy and save to file.
         """
+        # Convert the numpy array (OpenCV format) to a PIL Image
+        pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+
+        # Save PIL image to disk temporarily
+        temp_filename = 'temp_image.jpg'
+        pil_img.save(temp_filename, format="JPEG")
+
         try:
-            month, day, year = date.split('/')
-            date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 12:00:00"  # Padding month and day with zeros
-        except ValueError:
-            print(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
-            return None
+            # Load the image file with pyexiv2
+            img_data = pyexiv2.Image(temp_filename)
+            img_data.read_exif()
 
-        # Encode the image as a JPEG
-        success, encoded_img = cv2.imencode('.jpg', img)
-        if not success:
-            print(f"Failed to encode image")
-            return None
+            # get current date and time
+            current_datetime = datetime.datetime.now()
+            current_date = current_datetime.strftime("%m/%d/%Y")
+            current_time = current_datetime.strftime("%H:%M:%S")
 
-        # Load the EXIF data into piexif
-        exif_dict = piexif.load(encoded_img.tobytes())
 
-        # Update the DateTimeOriginal field with the formatted date
-        exif_dict['Exif'][piexif.ExifIFD.DateTimeOriginal] = date_formatted.encode('utf-8')
+            # Convert the date to EXIF format "YYYY:MM:DD HH:MM:SS"
+            try:
+                month, day, year = date.split('/')
+                date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 12:00:00"  # Padding month and day with zeros
+            except ValueError:
+                date_formatted = f"{current_date} {current_time}"
+                print(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
+                print(f"Defaulting to current date: {date_formatted}")
+                
 
-        # Save the updated EXIF data back to the image
-        exif_bytes = piexif.dump(exif_dict)
+            # Update the DateTimeOriginal (Date Taken), DateTime (Date Modified), and DateTimeDigitized (Date Created) fields
+            exif_tags = {
+                'Exif.Photo.DateTimeOriginal': date_formatted,   # Date Taken
+                'Exif.Image.DateTime': date_formatted,           # Date Modified
+                'Exif.Photo.DateTimeDigitized': date_formatted   # Date Created
 
-        # Use BytesIO to handle the image bytes
-        with io.BytesIO() as output:
-            piexif.insert(exif_bytes, encoded_img.tobytes(), output)
-            updated_image_bytes = output.getvalue()
+            }
+            img_data.modify_exif(exif_tags)
 
-        print(f"Updated image exif date: {date}")
+            img_data.modify_comment(f"Scanned: {date_formatted}")
+            img_data.modify_exif({'Exif.Photo.DateTimeOriginal': date_formatted})
 
-        return updated_image_bytes
-    
+
+            img_data.modify_comment(f"Scanned photo: {current_date} {current_time}")
+
+            print(f"Updated exif date to {date_formatted}")
+        finally:
+            img_data.close()
+
+        # Rename the temp file to the final filename
+        os.rename(temp_filename, filename)
+
+        #check if success
+        if os.path.exists(filename):
+            return True
+        return False
+
+
     def save_image(self, img, date, confidence):
         """
-        Save the image with the extracted date in the filename.
+        Save the image with the extracted date in the filename and update metadata.
         """
         filename = self.generate_filename(date, confidence)
-        self.save_file(img, filename)
-        self.current_image += 1
-        print(f"Image {self.current_image} of {self.num_images} processed\n")
+        success = self.update_metadata_and_save(img, date, filename)
+        if success is not None:
+            print(f"Saved image to {filename}")
+        else:
+            print(f"Failed to update metadata or save image: {filename}")
+
+        self.current_image_num += 1
+        print(f"Image {self.current_image_num} of {self.num_images} processed\n")
+        return success
+
 
     def generate_filename(self, date, confidence):
         """
@@ -113,13 +146,13 @@ class ImageOrganizer:
         if date is not None:
             formatted_date = date.replace('/', '-')
             if confidence < 9:
-                return rf"{self.save_path}\Failed\{self.current_image}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
+                return rf"{self.save_path}\Failed\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
             
             year, month_name = self.extract_year_month(date)
             self.ensure_directories_exist(year, month_name)
-            return rf"{self.save_path}\{year}\{month_name}\{self.current_image}_date_{formatted_date}_{random_number}.jpg"
+            return rf"{self.save_path}\{year}\{month_name}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
         else:
-            return rf"{self.save_path}\Failed\{self.current_image}_date_not_found_{random_number}.jpg"
+            return rf"{self.save_path}\Failed\{self.current_image_num}_date_not_found_{random_number}.jpg"
 
     def extract_year_month(self, date):
         """
@@ -169,91 +202,10 @@ class ImageOrganizer:
             print(f"Error saving image to {filename}")
 
 
-    def manually_set_date_for_failed_images(self):
-        failed_path = os.path.join(self.save_path, "Failed")
-        failed_images = [os.path.join(failed_path, file) for file in os.listdir(failed_path) if file.endswith(".jpg")]
-        
-        def draw_text_box(img, text, pos=(50, 50), box_size=(300, 50), font_scale=1, thickness=2):
-            x, y = pos
-            cv2.rectangle(img, (x, y), (x + box_size[0], y + box_size[1]), (255, 255, 255), -1)
-            cv2.putText(img, text, (x + 5, y + box_size[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
-
-        def get_date_input(img, img_path):
-            temp_img = img.copy()
-            filename = os.path.basename(img_path)
-            draw_text_box(temp_img, f"Filename: {filename}", (10, 10), (temp_img.shape[1] - 20, 40))
-            draw_text_box(temp_img, "Enter date (mm/dd/yyyy):", (10, 60), (temp_img.shape[1] - 20, 40))
-            date_input = ""
-
-            while True:
-                display_img = temp_img.copy()
-                draw_text_box(display_img, date_input, (10, 110), (temp_img.shape[1] - 20, 40))
-                cv2.imshow("Failed Image", display_img)
-                key = cv2.waitKey(100)
-
-                if key == 13:  # Enter key
-                    break
-                elif key == 8:  # Backspace key
-                    date_input = date_input[:-1]
-                elif 32 <= key <= 126:  # Printable characters
-                    date_input += chr(key)
-            
-            return date_input
-
-        for img_path in failed_images:
-            img = cv2.imread(img_path)
-            if img is None:
-                print(f"Failed to load image: {img_path}")
-                continue
-
-            # Resize the image to fit the screen
-            screen_res = 800, 600
-            scale_width = screen_res[0] / img.shape[1]
-            scale_height = screen_res[1] / img.shape[0]
-            scale = min(scale_width, scale_height)
-            window_width = int(img.shape[1] * scale)
-            window_height = int(img.shape[0] * scale)
-            resized_img = cv2.resize(img, (window_width, window_height))
-
-            # Get date input from user
-            date = get_date_input(resized_img, img_path)
-
-            try:
-                # Validate the date format
-                month, day, year = date.split('/')
-                assert len(month) == 2 and len(day) == 2 and len(year) == 4
-                date_formatted = f"{month}/{day}/{year}"
-            except (ValueError, AssertionError):
-                print("Invalid date format. Skipping this image.")
-                cv2.destroyWindow("Failed Image")
-                continue
-
-            # Update image metadata
-            updated_img_bytes = self.update_image_metadata(img, date_formatted)
-            if updated_img_bytes is not None:
-                updated_img_array = np.frombuffer(updated_img_bytes, dtype=np.uint8)
-                updated_img = cv2.imdecode(updated_img_array, cv2.IMREAD_COLOR)
-                if updated_img is None:
-                    print(f"Failed to decode updated image bytes for: {img_path}")
-                    cv2.destroyWindow("Failed Image")
-                    continue
-
-                # Generate new filename
-                confidence = 9  # Manually set high confidence since user is providing the date
-                filename = self.generate_filename(date_formatted, confidence)
-
-                # Save the updated image
-                self.save_file(updated_img, filename)
-
-                # Remove the old failed image
-                os.remove(img_path)
-                print(f"Updated and saved image with new date: {filename}")
-
-            cv2.destroyWindow("Failed Image")
 
 if __name__ == "__main__":
     # Example usage
-    scans_path = r"..\img\test"
+    scans_path = r"..\img\test\New folder"
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
@@ -263,4 +215,3 @@ if __name__ == "__main__":
 
     image_organizer = ImageOrganizer(scans_path, save_path, error_path)
     image_organizer.process_images()
-    # image_organizer.manually_set_date_for_failed_images()

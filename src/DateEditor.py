@@ -6,6 +6,7 @@ import cv2
 import os
 from PIL import Image, ImageTk
 import numpy as np
+import pyexiv2
 from ImageOrganizer import ImageOrganizer  
 from DateExtractor import DateExtractor
 
@@ -33,46 +34,52 @@ class ImageDateEditor:
         self.canvas.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
         self.canvas.bind("<Configure>", self.on_resize)
 
+
         # Button to save the date
         self.save_button = ttk.Button(self.main_frame, text="Save Date", command=self.save_date)
         self.save_button.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
         # Entry for date input
         self.date_entry = ttk.Entry(self.main_frame, width=20)
-        self.date_entry.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        self.date_entry.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
         self.date_entry.focus_set()  # Automatically focus on the entry widget
 
         # Bind Enter key to save the date
         self.date_entry.bind("<Return>", lambda event: self.save_date())
 
+        # label to show current image date
+        self.date_label = tk.Label(self.main_frame)
+        self.date_label.pack(side=tk.BOTTOM, fill=tk.X, padx=1, pady=1)
 
         # Load the first image
         self.load_next_image()
+
+    def update_label(self, text):
+        self.date_label.config(text=text)
+
+    def show_alert(self, text, txt_color):
+        self.date_entry.config(foreground=txt_color)  # Change text color to the specified color
+        self.date_entry.delete(0, tk.END)  # Clear the entry widget
+        self.date_entry.insert(0, text)  # Insert the new text
+        self.root.after(700, lambda: self.reset_date_entry())  # Reset the entry widget after 1 second
+
+    def reset_date_entry(self):
+        self.date_entry.config(foreground="black")  # Change text color to the specified color
+        self.date_entry.delete(0, tk.END)  # Clear the entry widget
+        self.date_entry.insert(0, "")  # Insert "Save" as the new text
+
 
     def get_failed_images(self):
         failed_path = self.image_organizer.error_path
         return [os.path.join(failed_path, file) for file in os.listdir(failed_path) if file.endswith(".jpg")]
     
 
-    def get_image_date_from_name(self):
-        # Extract the date from the image name
-        date_pattern = r'^(\d{2})[\/\s-]?(\d{2})[\/\s-]?(\d{4})$'
-        date_format = "%m%d%Y"  # 01/07/2001, 01 07 2001, 01072001
-        match = re.match(date_pattern, self.current_image_path)
-        if match:
-            date = ''.join(match.groups())
-            date = datetime.strptime(date, date_format).strftime("%m/%d/%Y")
+    def get_image_date(self):
+            img_data = pyexiv2.Image(self.current_image_path)
+            exif = img_data.read_exif()
+            exif_date = exif['Exif.Image.DateTime']
+            date = self.infer_date(exif_date)
             return date
-        else:
-            return None
-        
-    def set_placeholder_date(self):
-        # Set the placeholder date in the entry widget
-        date = self.get_image_date_from_name()
-        if date is not None:
-            self.date_entry.insert(0, date)
-        else:
-            self.date_entry.insert(0, "mm/dd/yyyy")
 
     def load_next_image(self):
         if self.current_index < len(self.failed_images):
@@ -81,7 +88,7 @@ class ImageDateEditor:
 
             # Load the large image
             self.current_image = cv2.imread(self.current_image_path)
-            self.set_placeholder_date()
+            self.update_label(f"Image date: {self.get_image_date()}")
 
 
             # Display the large image
@@ -134,25 +141,31 @@ class ImageDateEditor:
         # Validate and update the image metadata
         inferred_date = self.validate_date(date)
         if inferred_date:
-            img = self.image_organizer.update_image_metadata(self.current_image, inferred_date)
             print(f"Updated date for {self.current_image_path} to {inferred_date}")
-            self.image_organizer.save_image(img, inferred_date, 10)
+            success = self.image_organizer.save_image(self.current_image, inferred_date, 10)
 
-            # Delete the current image
-            os.remove(self.current_image_path)
-            print(f"Deleted image: {self.current_image_path}")
+            if success:
+                self.show_alert("Image updated", "green")
+                # Delete the current image
+                os.remove(self.current_image_path)
+            else:
+                self.show_alert("Failed to save image", "red")
+
 
             # Load the next image
             self.load_next_image()
         else:
+            self.show_alert("Invalid Date", "red")
             print("Invalid date format. Please enter a date in the format mm/dd/yyyy.")
 
     def infer_date(self, date):
+        date = date.strip()
         # Define date patterns
         patterns = [
-            (r'^(\d{2})[\/\s-]?(\d{2})[\/\s-]?(\d{4})$', "%m%d%Y"),  # 01/07/2001, 01 07 2001, 01072001
+            (r'^(\d{2})[:\/\s-]?(\d{2})[:\/\s-]?(\d{4})$', "%m%d%Y"),  # 01/07/2001, 01 07 2001, 01072001
             (r'^(\d{1,2})[\/\s-]?(\d{1,2})[\/\s-]?(\d{2})$', "%m%d%y"),  # 1/7/01, 1 7 01, 01/07/01
             (r'^(\d{1,2})[\/\s-]?(\d{1,2})[\/\s-]?(\d{4})$', "%m%d%Y"),  # 1/7/2001
+            (r'(\d{4})[\:/\s-](\d{2})[\/:\s-](\d{2})', "%Y%m%d"), # yyyy:mm:dd
             (r'^(\d{2})(\d{2})(\d{4})$', "%d%m%Y"),  # 31122000
             (r'^(\d{2})(\d{2})(\d{2})$', "%d%m%y"),  # 311299
         ]
