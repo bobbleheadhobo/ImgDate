@@ -27,6 +27,7 @@ class DateExtractor:
         Crop the bottom right corner of the image where the date is located.
         Converts to base64 and returns the cropped image.
         """
+        print(type(img))
         # Crop the bottom right corner
         h, w, _ = img.shape
         # cv2.rectangle(img, (int(w*self.crop_width), int(h*self.crop_height)), (w, h), (0, 255, 0), 5)
@@ -40,7 +41,7 @@ class DateExtractor:
             cropped_img = base64.b64encode(buffer).decode('utf-8')
 
         # # Debug Optional: Save the processed image for debugging
-        cv2.imwrite(f"../img/processed/date_{random.randint(1, 100)}.jpg", cropped_img)
+        # cv2.imwrite(f"../img/processed/date_{random.randint(1, 100)}.jpg", cropped_img)
 
         # return base64_img
         return cropped_img
@@ -88,7 +89,11 @@ class DateExtractor:
         return extracted_date, confidence
 
    
-
+    #!instead of returing none return the current date 
+            #     current_datetime = datetime.datetime.now()
+            # current_date = current_datetime.strftime("%m/%d/%Y")
+            # current_time = current_datetime.strftime("%H:%M:%S")
+            # date_formatted = f"{current_date} {current_time}"
     def validate_date_format(self, text):
         """
         Validate the extracted text to see if it matches the date format mm dd 'yy.
@@ -128,6 +133,7 @@ class DateExtractor:
         else:
             print("No valid date found in the text.")
             return None
+        
 
     def extract_and_validate_date(self, img):
         """
@@ -147,7 +153,6 @@ class DateExtractor:
         else:
             print("!!No date extracted from the image.")
             return None, -1
-
 
 
 

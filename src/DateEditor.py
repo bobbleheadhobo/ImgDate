@@ -7,33 +7,37 @@ import os
 from PIL import Image, ImageTk
 import numpy as np
 import pyexiv2
-from ImageOrganizer import ImageOrganizer  
 from DateExtractor import DateExtractor
 
 class ImageDateEditor:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, source_folder_path, image_organizer):
+        self.root = tk.Tk()
         self.root.title("Image Date Editor")
+        self.image_organizer = image_organizer
 
-        self.image_organizer = ImageOrganizer()
         self.date_extractor = DateExtractor()
         self.current_image_path = None
         self.current_image = None
         self.failed_images = self.get_failed_images()
-        self.image_organizer.num_images = len(self.failed_images)
+        self.num_images = len(self.failed_images)
+        self.image_organizer.num_images = self.num_images
         self.current_index = 0
 
 
     def setup_gui(self):
-        # Set up the main frame
+        print("Starting date editor")
+       # Set up the main frame
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Show number of images left at the top
+        self.num_images_label = tk.Label(self.main_frame, bg="lightblue", font=("Arial", 12))
+        self.num_images_label.pack(side=tk.TOP, fill=tk.X, padx=1, pady=1)
 
         # Canvas for displaying the large image
         self.canvas = tk.Canvas(self.main_frame, bg="gray")
         self.canvas.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
         self.canvas.bind("<Configure>", self.on_resize)
-
 
         # Button to save the date
         self.save_button = ttk.Button(self.main_frame, text="Save Date", command=self.save_date)
@@ -44,24 +48,27 @@ class ImageDateEditor:
         self.date_entry.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
         self.date_entry.focus_set()  # Automatically focus on the entry widget
 
+        # Label to show the current image date
+        self.date_label = tk.Label(self.main_frame, bg="lightgrey", font=("Arial", 10))
+        self.date_label.pack(side=tk.BOTTOM, fill=tk.X, padx=1, pady=1)
+
         # Bind Enter key to save the date
         self.date_entry.bind("<Return>", lambda event: self.save_date())
-
-        # label to show current image date
-        self.date_label = tk.Label(self.main_frame)
-        self.date_label.pack(side=tk.BOTTOM, fill=tk.X, padx=1, pady=1)
 
         # Load the first image
         self.load_next_image()
 
-    def update_label(self, text):
+    def update_date_label(self, text):
         self.date_label.config(text=text)
+
+    def update_num_image_label(self, text):
+        self.num_images_label.config(text=text)
 
     def show_alert(self, text, txt_color):
         self.date_entry.config(foreground=txt_color)  # Change text color to the specified color
         self.date_entry.delete(0, tk.END)  # Clear the entry widget
         self.date_entry.insert(0, text)  # Insert the new text
-        self.root.after(700, lambda: self.reset_date_entry())  # Reset the entry widget after 1 second
+        self.root.after(500, lambda: self.reset_date_entry())  # Reset the entry widget after 1 second
 
     def reset_date_entry(self):
         self.date_entry.config(foreground="black")  # Change text color to the specified color
@@ -77,24 +84,29 @@ class ImageDateEditor:
     def get_image_date(self):
             img_data = pyexiv2.Image(self.current_image_path)
             exif = img_data.read_exif()
-            exif_date = exif['Exif.Image.DateTime']
-            date = self.infer_date(exif_date)
+            try:
+                exif_date = exif['Exif.Image.DateTime']
+                date = self.infer_date(exif_date)
+            except:
+                date = "Unknown Date"
             return date
 
     def load_next_image(self):
-        if self.current_index < len(self.failed_images):
+        if self.current_index < self.num_images:
             self.current_image_path = self.failed_images[self.current_index]
             self.current_index += 1
 
             # Load the large image
             self.current_image = cv2.imread(self.current_image_path)
-            self.update_label(f"Image date: {self.get_image_date()}")
+            self.update_date_label(f"Image date: {self.get_image_date()}")
+            self.update_num_image_label(f"{self.current_index} of {self.num_images} images")
 
 
             # Display the large image
             self.display_image()
         else:
             print("No more images to display.")
+            self.root.destroy()
 
     def display_image(self):
         if self.current_image is None:
@@ -135,28 +147,45 @@ class ImageDateEditor:
         self.display_image()
 
     def save_date(self):
-        # Get the entered date
-        date = self.date_entry.get()
+        """
+        Save the date entered by the user or inferred from the image metadata,
+        update the image's metadata, and proceed to the next image.
+        """
+        # Get the entered date from the date entry field
+        date = self.date_entry.get().strip()  # Remove leading/trailing spaces
+        print(f"Entered date: {date}")
 
-        # Validate and update the image metadata
-        inferred_date = self.validate_date(date)
-        if inferred_date:
-            print(f"Updated date for {self.current_image_path} to {inferred_date}")
-            success = self.image_organizer.save_image(self.current_image, inferred_date, 10)
+        if not date:
+            # If no date is entered, attempt to infer the date from the image metadata
+            date = self.get_image_date()
+            print(f"Inferred date from image metadata: {date}")
+        else:
+            date = self.validate_date(date)
 
+        print(f"Valid date: {date}")
+        if date:
+            
+            # Attempt to save the image with the updated metadata
+            success = self.image_organizer.save_image(self.current_image, date, 10)
+            
             if success:
                 self.show_alert("Image updated", "green")
-                # Delete the current image
-                os.remove(self.current_image_path)
+                # Delete the current image file after successful update
+                try:
+                    os.remove(self.current_image_path)
+                    print(f"Deleted current image: {self.current_image_path}")
+                except OSError as e:
+                    print(f"Error deleting file {self.current_image_path}: {e}")
             else:
                 self.show_alert("Failed to save image", "red")
-
 
             # Load the next image
             self.load_next_image()
         else:
+            # Handle invalid date format
             self.show_alert("Invalid Date", "red")
             print("Invalid date format. Please enter a date in the format mm/dd/yyyy.")
+
 
     def infer_date(self, date):
         date = date.strip()
@@ -200,23 +229,9 @@ class ImageDateEditor:
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(img_rgb)
         return ImageTk.PhotoImage(img_pil)
-
-if __name__ == "__main__":
-    # Set up the ImageOrganizer
-    scans_path = r"..\img\test\skewed"
-    save_path = r"..\img\processed"
-    error_path = rf"{save_path}\Failed"
-
-    # # Delete files and folders in save path directory recursively
-    # shutil.rmtree(save_path)
-    # os.makedirs(save_path)
-
-    image_organizer = ImageOrganizer(scans_path, save_path, error_path)
-
-    # Create the Tkinter window
-    root = tk.Tk()
-    date_editor = ImageDateEditor(root)
-    date_editor.setup_gui()
-    root.mainloop()
+    
+    def start(self):
+        self.setup_gui()
+        self.root.mainloop()
 
 

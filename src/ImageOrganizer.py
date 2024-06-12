@@ -2,6 +2,7 @@ import datetime
 import io
 import os
 import shutil
+import threading
 import numpy as np
 import cv2
 import random
@@ -11,10 +12,11 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 import pyexiv2
 from AutoCrop import AutoCrop
+from DateEditor import ImageDateEditor
 from DateExtractor import DateExtractor
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
+    def __init__(self, scans_path=r"..\img\test", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -23,29 +25,24 @@ class ImageOrganizer:
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
 
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-
-        if not os.path.exists(error_path):
-            os.makedirs(error_path)
+        os.makedirs(save_path, exist_ok=True)
+        os.makedirs(error_path, exist_ok=True)
 
     def process_images(self):
         scan_file_paths = self.get_scan_file_paths()
         print(f"Found {len(scan_file_paths)} scans to process.")
 
-        # Process images in parallel
-        with ThreadPoolExecutor() as executor:
+
+        with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust number of workers as needed
             results = list(executor.map(self.process_single_scan, scan_file_paths))
         
-        # Flatten the list of lists and save images
-        for idx, cropped_images in enumerate(results):
+        # Save images in parallel
+        for cropped_images in results:
             if cropped_images:
-                for i, img in enumerate(cropped_images):
-                    filename = f'{self.save_path}/cropped_image_{self.current_image_num}.jpg'
-                    # cv2.imwrite(filename, img)
-                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
-                    date = "01/01/1985"; confidence = random.randint(-1, 20)
-
+                for img in cropped_images:
+                    # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                    # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                    date, confidence = self.date_extractor.extract_and_validate_date(img)
                     self.save_image(img, date, confidence)
 
     def get_scan_file_paths(self):
@@ -56,7 +53,7 @@ class ImageOrganizer:
         return image_files
 
     def process_single_scan(self, scan_path):
-        print(f"Processing: {scan_path}")
+        print(f"Cropping: {scan_path}")
         cropped_images = self.auto_crop.crop_and_straighten(scan_path)
         self.num_images += len(cropped_images)
         return cropped_images
@@ -116,9 +113,8 @@ class ImageOrganizer:
         os.rename(temp_filename, filename)
 
         #check if success
-        if os.path.exists(filename):
-            return True
-        return False
+        return os.path.exists(filename)
+
 
 
     def save_image(self, img, date, confidence):
@@ -146,13 +142,13 @@ class ImageOrganizer:
         if date is not None:
             formatted_date = date.replace('/', '-')
             if confidence < 9:
-                return rf"{self.save_path}\Failed\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
+                return rf"{self.error_path}\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
             
             year, month_name = self.extract_year_month(date)
             self.ensure_directories_exist(year, month_name)
             return rf"{self.save_path}\{year}\{month_name}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
         else:
-            return rf"{self.save_path}\Failed\{self.current_image_num}_date_not_found_{random_number}.jpg"
+            return rf"{self.error_path}\{self.current_image_num}_date_not_found_{random_number}.jpg"
 
     def extract_year_month(self, date):
         """
@@ -163,16 +159,9 @@ class ImageOrganizer:
         return year, month_name
 
     def ensure_directories_exist(self, year, month_name):
-        """
-        Ensure the year and month directories exist.
-        """
         year_folder = os.path.join(self.save_path, year)
-        if not os.path.exists(year_folder):
-            os.makedirs(year_folder)
-
         month_folder = os.path.join(year_folder, month_name)
-        if not os.path.exists(month_folder):
-            os.makedirs(month_folder)
+        os.makedirs(month_folder, exist_ok=True)
 
     def save_file(self, img, filename):
         """
