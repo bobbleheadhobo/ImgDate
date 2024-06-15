@@ -155,7 +155,7 @@ class ImageDateEditor:
         date = self.date_entry.get().strip()  # Remove leading/trailing spaces
         print(f"Entered date: {date}")
 
-        if not date:
+        if date == "":
             # If no date is entered, attempt to infer the date from the image metadata
             date = self.get_image_date()
             print(f"Inferred date from image metadata: {date}")
@@ -163,7 +163,7 @@ class ImageDateEditor:
             date = self.validate_date(date)
 
         print(f"Valid date: {date}")
-        if date:
+        if date is not None:
             
             # Attempt to save the image with the updated metadata
             success = self.image_organizer.save_image(self.current_image, date, 10)

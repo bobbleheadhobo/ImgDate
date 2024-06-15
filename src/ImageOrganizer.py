@@ -16,7 +16,7 @@ from DateEditor import ImageDateEditor
 from DateExtractor import DateExtractor
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\test", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -84,7 +84,7 @@ class ImageOrganizer:
             try:
                 month, day, year = date.split('/')
                 date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 12:00:00"  # Padding month and day with zeros
-            except ValueError:
+            except Exception as e:
                 date_formatted = f"{current_date} {current_time}"
                 print(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
                 print(f"Defaulting to current date: {date_formatted}")

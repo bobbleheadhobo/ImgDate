@@ -17,7 +17,7 @@ class AutoCrop:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Define the range for the background color (near white)
-        lower_white = np.array([180, 180, 180], dtype=np.uint8)
+        lower_white = np.array([200, 200, 200], dtype=np.uint8)
         upper_white = np.array([255, 255, 255], dtype=np.uint8)
 
         # Create a mask to isolate the background
@@ -47,7 +47,7 @@ class AutoCrop:
             # Get the minimum area rectangle
             rect = cv2.minAreaRect(contour)
             box = cv2.boxPoints(rect)
-            box = np.int0(box)
+            box = np.intp(box)
 
             # Filter out very small or very large areas
             area = cv2.contourArea(contour)
@@ -103,7 +103,7 @@ class AutoCrop:
         height, width = image.shape[:2]
         if height > width:
             # Rotate 90 degrees clockwise to switch to landscape
-            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+            image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
         return image
     
     def remove_border(self, image, border_size):
@@ -125,3 +125,20 @@ class AutoCrop:
         plt.axis('off')
         plt.tight_layout()
         plt.show()
+
+if __name__ == "__main__":
+    # Replace with the path to your image file
+    image_path = r"C:\Users\super\OneDrive\Documents\Code\img_date\img\test\distorted\00000001_8.jpg"
+
+    import shutil
+    import os
+    save_path = r"..\img\processed"
+    shutil.rmtree(save_path, ignore_errors=True)
+    os.makedirs(save_path, exist_ok=True)
+    
+    auto_crop = AutoCrop()
+    cropped_images = auto_crop.crop_and_straighten(image_path)
+    print(f"Detected {len(cropped_images)} images.")
+    for i, img in enumerate(cropped_images):
+        cv2.imwrite(f"../img/processed/cropped_{i}.jpg", img)
+        print(f"Saved cropped image {i}.")

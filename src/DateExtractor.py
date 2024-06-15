@@ -27,7 +27,6 @@ class DateExtractor:
         Crop the bottom right corner of the image where the date is located.
         Converts to base64 and returns the cropped image.
         """
-        print(type(img))
         # Crop the bottom right corner
         h, w, _ = img.shape
         # cv2.rectangle(img, (int(w*self.crop_width), int(h*self.crop_height)), (w, h), (0, 255, 0), 5)
@@ -64,7 +63,7 @@ class DateExtractor:
             "content": [
                 {
                 "type": "text",
-                "text": "This is a film image that likely contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with \"01 01 \'85 | confidence: -1\" as a placeholder."
+                "text": "This is a film image that contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. The date will be in the format 'YY MM DD. A way to differentiate the two dates is that the year will always start an apostrophe. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with \"01 01 \'85 | confidence: -1\" as a placeholder."
                 },
                 {
                 "type": "image_url",
