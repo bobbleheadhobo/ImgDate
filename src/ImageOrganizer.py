@@ -30,7 +30,7 @@ class ImageOrganizer:
 
     def process_images(self):
         scan_file_paths = self.get_scan_file_paths()
-        print(f"Found {len(scan_file_paths)} scans to process.")
+        print(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
 
 
         with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust number of workers as needed

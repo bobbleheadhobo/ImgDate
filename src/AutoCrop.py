@@ -5,6 +5,7 @@ import random
 
 class AutoCrop:
     def __init__(self):
+        self.current_image = 0
         pass
 
     def crop_and_straighten(self, image_path):
@@ -38,7 +39,7 @@ class AutoCrop:
         # Create the directory if it doesn't exist
         
         # Save the image
-        cv2.imwrite(f"../img/processed/mask_{random.randint(1,100)}.jpg", morph)
+        cv2.imwrite(f"../img/processed/mask_{self.current_image}.jpg", morph)
 
         cropped_images = []
         preview_image = image.copy()
@@ -62,6 +63,7 @@ class AutoCrop:
 
             if cropped.size > 0:
                 cropped_images.append(cropped)
+                self.current_image += 1
 
         # debug save the detected contours for cropping
         cv2.imwrite(f"../img/processed/contours_{random.randint(1,100)}.jpg", preview_image)
@@ -71,22 +73,46 @@ class AutoCrop:
         return cropped_images
 
     def crop_rotated_rectangle(self, image, rect):
+        # Get the original dimensions
+        original_height, original_width = image.shape[:2]
+
+        # Calculate the size of the new canvas (diagonal of the original image)
+        new_size = int(np.sqrt(original_width**2 + original_height**2))
+
+        # Create a larger canvas with the new size, and place the original image at the center
+        canvas = np.full((new_size, new_size, 3), 255, dtype=np.uint8)  # White background
+        center_x, center_y = new_size // 2, new_size // 2
+
+        # Calculate the offset to center the image on the new canvas
+        offset_x, offset_y = center_x - original_width // 2, center_y - original_height // 2
+
+        # Place the original image on the new canvas
+        canvas[offset_y:offset_y + original_height, offset_x:offset_x + original_width] = image
+
+        # Calculate the new center for the rotation (center of the canvas)
+        new_center = (center_x, center_y)
+
         # Get the rotation matrix for the given angle and center of the rectangle
-        width = int(rect[1][0])
-        height = int(rect[1][1])
         angle = rect[2]
+        rotation_matrix = cv2.getRotationMatrix2D(new_center, angle, 1.0)
 
-        # Calculate the center and the rotation matrix
-        center = (rect[0][0], rect[0][1])
-        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-        
-        # Perform the rotation
-        rotated = cv2.warpAffine(image, rotation_matrix, (image.shape[1], image.shape[0]), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        # Perform the rotation with a constant border
+        rotated = cv2.warpAffine(canvas, rotation_matrix, (new_size, new_size),
+                                 flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
 
-        # Crop the rotated rectangle from the rotated image
+        # Calculate the new center of the rotated rectangle relative to the canvas
+        rect_center_adjusted = (rect[0][0] + offset_x, rect[0][1] + offset_y)
+
+        # Adjust the center of the rotated rectangle for the new rotated canvas
+        center_transformed = self.transform_center(rotation_matrix, rect_center_adjusted)
+
+        # Extract the size of the rectangle to crop
+        width, height = int(rect[1][0]), int(rect[1][1])
         expand_by = 12  # Adjust this value as needed
         size = (width + expand_by, height + expand_by)
-        cropped = cv2.getRectSubPix(rotated, size, center)
+
+        # Extract the rotated rectangle from the rotated image
+        cropped = cv2.getRectSubPix(rotated, size, center_transformed)
 
         # Ensure the cropped image is rotated back correctly
         if angle < -45:
@@ -98,6 +124,13 @@ class AutoCrop:
         final_cropped = self.ensure_landscape(final_cropped)
 
         return final_cropped
+    
+    def transform_center(self, rotation_matrix, center):
+        # Apply the rotation matrix to the center point
+        center_array = np.array([center[0], center[1], 1]).reshape((3, 1))
+        transformed_center = np.dot(rotation_matrix, center_array)
+        return transformed_center[:2].flatten()
+    
 
     def ensure_landscape(self, image):
         height, width = image.shape[:2]
@@ -107,23 +140,20 @@ class AutoCrop:
         return image
     
     def remove_border(self, image, border_size):
-        # Remove the border by slicing off the edges
+        # Ensure the border size is not larger than half the image dimensions
         height, width = image.shape[:2]
+        if border_size >= min(height // 2, width // 2):
+            border_size = min(height // 2, width // 2) - 1
         return image[border_size:height-border_size, border_size:width-border_size]
 
-    def preview_detected_contours(self, image, trimmed):
+
+    def preview_detected_contours(self, image):
         plt.figure(figsize=(10, 10))
         plt.gca().set_facecolor('black')
         plt.subplot(1, 2, 1)
         plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         plt.title('Original Image')
         plt.axis('off')
-
-        plt.subplot(1, 2, 2)
-        plt.imshow(cv2.cvtColor(trimmed, cv2.COLOR_BGR2RGB))
-        plt.title('Trimmed Image')
-        plt.axis('off')
-        plt.tight_layout()
         plt.show()
 
 if __name__ == "__main__":

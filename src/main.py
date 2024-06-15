@@ -12,7 +12,7 @@ def main():
 
     args = parser.parse_args()
 
-    scans_path = r"..\img\test\distorts"
+    scans_path = r"..\img\test\distorted"
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
