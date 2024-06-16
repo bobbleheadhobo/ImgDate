@@ -23,10 +23,9 @@ class ImageDateEditor:
         self.image_organizer.num_images = self.num_images
         self.current_index = 0
 
-
     def setup_gui(self):
         print("Starting date editor")
-       # Set up the main frame
+        # Set up the main frame
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -71,25 +70,23 @@ class ImageDateEditor:
         self.root.after(500, lambda: self.reset_date_entry())  # Reset the entry widget after 1 second
 
     def reset_date_entry(self):
-        self.date_entry.config(foreground="black")  # Change text color to the specified color
+        self.date_entry.config(foreground="black")  # Change text color back to black
         self.date_entry.delete(0, tk.END)  # Clear the entry widget
-        self.date_entry.insert(0, "")  # Insert "Save" as the new text
-
+        self.date_entry.insert(0, "")  # Reset the entry widget
 
     def get_failed_images(self):
         failed_path = self.image_organizer.error_path
         return [os.path.join(failed_path, file) for file in os.listdir(failed_path) if file.endswith(".jpg")]
-    
 
     def get_image_date(self):
-            img_data = pyexiv2.Image(self.current_image_path)
-            exif = img_data.read_exif()
-            try:
-                exif_date = exif['Exif.Image.DateTime']
-                date = self.infer_date(exif_date)
-            except:
-                date = "Unknown Date"
-            return date
+        img_data = pyexiv2.Image(self.current_image_path)
+        exif = img_data.read_exif()
+        try:
+            exif_date = exif['Exif.Image.DateTime']
+            date = self.infer_date(exif_date)
+        except KeyError:
+            date = None
+        return date
 
     def load_next_image(self):
         if self.current_index < self.num_images:
@@ -100,7 +97,6 @@ class ImageDateEditor:
             self.current_image = cv2.imread(self.current_image_path)
             self.update_date_label(f"Image date: {self.get_image_date()}")
             self.update_num_image_label(f"{self.current_index} of {self.num_images} images")
-
 
             # Display the large image
             self.display_image()
@@ -157,14 +153,15 @@ class ImageDateEditor:
 
         if date == "":
             # If no date is entered, attempt to infer the date from the image metadata
-            date = self.get_image_date()
-            print(f"Inferred date from image metadata: {date}")
+            print("skipping")
+            self.load_next_image()
+            return
         else:
             date = self.validate_date(date)
 
-        print(f"Valid date: {date}")
-        if date is not None:
-            
+        if date is not None:  # Check specifically for None
+            print(f"Valid date: {date}")
+
             # Attempt to save the image with the updated metadata
             success = self.image_organizer.save_image(self.current_image, date, 10)
             
@@ -186,10 +183,8 @@ class ImageDateEditor:
             self.show_alert("Invalid Date", "red")
             print("Invalid date format. Please enter a date in the format mm/dd/yyyy.")
 
-
     def infer_date(self, date):
         date = date.strip()
-        # Define date patterns
         patterns = [
             (r'^(\d{2})[:\/\s-]?(\d{2})[:\/\s-]?(\d{4})$', "%m%d%Y"),  # 01/07/2001, 01 07 2001, 01072001
             (r'^(\d{1,2})[\/\s-]?(\d{1,2})[\/\s-]?(\d{2})$', "%m%d%y"),  # 1/7/01, 1 7 01, 01/07/01
@@ -202,18 +197,15 @@ class ImageDateEditor:
         for pattern, date_format in patterns:
             match = re.match(pattern, date)
             if match:
-                # Reconstruct the date string based on captured groups
                 reconstructed_date = ''.join(match.groups())
                 try:
-                    # Parse and format the date
                     parsed_date = datetime.strptime(reconstructed_date, date_format)
                     formatted_date = parsed_date.strftime("%m/%d/%Y")
                     return formatted_date
                 except ValueError:
                     continue
 
-        # If no pattern matched, return False or raise an error
-        return False
+        return None  # Explicitly return None if no pattern matched
 
     def validate_date(self, date):
         inferred_date = self.infer_date(date)
@@ -222,16 +214,23 @@ class ImageDateEditor:
             print(f"Validated date: {inferred_date}")
             return inferred_date
         print(f"Invalid date: {date}")
-        return False
+        return None  # Explicitly return None for invalid dates
 
-    def cv2_to_tk(self, img):
-        """Convert a cv2 image to a Tkinter PhotoImage"""
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        return ImageTk.PhotoImage(img_pil)
-    
+    def generate_filename(self, date, confidence):
+        if date is None:  # Check specifically for None
+            raise ValueError("Invalid date provided for filename generation.")
+
+        # Continue with filename generation if date is valid
+        formatted_date = date.replace('/', '-')
+        filename = f"{formatted_date}_confidence{confidence}.jpg"
+        return filename
+
+    def cv2_to_tk(self, cv_image):
+        # Convert the OpenCV image (BGR) to a format compatible with Tkinter (RGB)
+        rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        image_pil = Image.fromarray(rgb_image)
+        return ImageTk.PhotoImage(image_pil)
+
     def start(self):
         self.setup_gui()
         self.root.mainloop()
-
-
