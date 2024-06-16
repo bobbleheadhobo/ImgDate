@@ -1,14 +1,7 @@
 import base64
 import datetime
 import cv2
-import numpy as np
-from google.cloud import vision
-from google.cloud.vision_v1 import types
-from PIL import Image
-import piexif
 import re
-import random
-from matplotlib import pyplot as plt
 import os
 from dotenv import load_dotenv
 

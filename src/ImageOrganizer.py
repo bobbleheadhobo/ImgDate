@@ -1,18 +1,14 @@
 import datetime
-import io
 import os
 import shutil
-import threading
 import numpy as np
 import cv2
 import random
-import piexif
 import calendar
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 import pyexiv2
 from AutoCrop import AutoCrop
-from DateEditor import ImageDateEditor
 from DateExtractor import DateExtractor
 
 class ImageOrganizer:
@@ -40,9 +36,9 @@ class ImageOrganizer:
         for cropped_images in results:
             if cropped_images:
                 for img in cropped_images:
-                    date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                    confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                    # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                    date, confidence = self.date_extractor.extract_and_validate_date(img)
                     self.save_image(img, date, confidence)
 
     def get_scan_file_paths(self):

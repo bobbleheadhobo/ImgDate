@@ -1,5 +1,4 @@
 import time
-import sys
 import argparse
 import shutil
 import os

@@ -5,7 +5,6 @@ from tkinter import ttk
 import cv2
 import os
 from PIL import Image, ImageTk
-import numpy as np
 import pyexiv2
 from DateExtractor import DateExtractor
 
