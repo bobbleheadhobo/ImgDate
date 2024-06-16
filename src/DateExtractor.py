@@ -97,7 +97,7 @@ class DateExtractor:
         """
         Validate the extracted text to see if it matches the date format mm dd 'yy.
         """
-        print(f"Extracted text: {text}")
+        print(f"Extracted date: {text}")
         # Define the regex pattern for the date format mm dd 'yy
         pattern = r'(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ]\'*(\d{2,4})'
         
@@ -118,20 +118,22 @@ class DateExtractor:
                 else:
                     year = "20" + year
 
+            date = f"{month.zfill(2)}/{day.zfill(2)}/{year}"
+
             # Validate the date
             if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:
-                print("Invalid date detected.")
-                return None
+                print("Out of bounds date detected.")
+                return date, False
             
             # checks for placeholder date when not found
-            if month == "01" or day == "01" or year == "1985":
+            if month == "01" and day == "01" and year == "1985":
                 print("Date not found in image")
-                return None
+                return None, False
 
-            return f"{month.zfill(2)}/{day.zfill(2)}/{year}"
+            return date, True
         else:
             print("No valid date found in the text.")
-            return None
+            return date, False
         
 
     def extract_and_validate_date(self, img):
@@ -143,13 +145,15 @@ class DateExtractor:
         
         # Extract text using Google Vision
         extracted_date, confidence = self.read_date(cropped_img)
-        del cropped_img
         
         if extracted_date:
             # Validate the extracted text as a date
-            valid_date = self.validate_date_format(extracted_date)
-            print(f"Extracted date: {valid_date} | Confidence: {confidence}")
-            return valid_date, int(confidence)
+            clean_date, is_valid = self.validate_date_format(extracted_date)
+            print(f"Extracted date: {clean_date} | Confidence: {confidence}")
+            if not is_valid:
+                confidence = -1
+
+            return clean_date, int(confidence)
         else:
             print("!!No date extracted from the image.")
             return None, -1
