@@ -143,6 +143,7 @@ class DateExtractor:
         
         # Extract text using Google Vision
         extracted_date, confidence = self.read_date(cropped_img)
+        del cropped_img
         
         if extracted_date:
             # Validate the extracted text as a date

@@ -40,9 +40,9 @@ class ImageOrganizer:
         for cropped_images in results:
             if cropped_images:
                 for img in cropped_images:
-                    # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                    # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-                    date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                    confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
                     self.save_image(img, date, confidence)
 
     def get_scan_file_paths(self):

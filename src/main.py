@@ -1,3 +1,4 @@
+import time
 import sys
 import argparse
 import shutil
@@ -12,7 +13,7 @@ def main():
 
     args = parser.parse_args()
 
-    scans_path = r"..\img\test\distorted"
+    scans_path = r"..\img\unprocessed"
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
@@ -21,8 +22,11 @@ def main():
         os.makedirs(save_path, exist_ok=True)
 
 
+    start_time = time.time()
+
     image_organizer = ImageOrganizer(scans_path=scans_path)
     date_editor = ImageDateEditor(error_path, image_organizer)
+
 
     if args.operation == "organize":
         image_organizer.process_images()
@@ -33,6 +37,10 @@ def main():
 
         date_editor.start()
 
+    end_time = time.time()
+    duration = end_time - start_time
+    minutes = duration / 60
+    print(f"Time taken to process images: {minutes} minutes")
     
 
 if __name__ == "__main__":
