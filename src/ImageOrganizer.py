@@ -13,10 +13,11 @@ from DateExtractor import DateExtractor
 from LoggerConfig import setup_logger
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive"):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
+        self.archive_path = archive_path
         self.num_images = 0
         self.current_image_num = 0
         self.auto_crop = AutoCrop()
@@ -25,6 +26,7 @@ class ImageOrganizer:
 
         os.makedirs(save_path, exist_ok=True)
         os.makedirs(error_path, exist_ok=True)
+        os.makedirs(archive_path, exist_ok=True)
 
     def process_images(self):
         scan_file_paths = self.get_scan_file_paths()
@@ -34,14 +36,29 @@ class ImageOrganizer:
         with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust number of workers as needed
             results = list(executor.map(self.process_single_scan, scan_file_paths))
         
-        # Save images in parallel
-        for cropped_images in results:
+
+        for scan_path, cropped_images in zip(scan_file_paths, results):
             if cropped_images:
                 for img in cropped_images:
                     date = "01/01/1985"  # Dummy date, replace with actual logic if needed
                     confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
                     # date, confidence = self.date_extractor.extract_and_validate_date(img)
                     self.save_image(img, date, confidence)
+                
+            # Move scan file to archive folder after processing
+            self.move_scan_to_archive(scan_path)
+
+    def move_scan_to_archive(self, scan_path):
+        """
+        Move the scan file to the archive folder after processing.
+        """
+        try:  
+            archive_scan_path = os.path.join(self.archive_path, os.path.basename(scan_path))
+            shutil.move(scan_path, archive_scan_path)
+            self.log.info(f"Moved scan {scan_path} to {archive_scan_path}")
+        except Exception as e:
+            self.log.error(f"Failed to move {scan_path} to archive. Error: {e}")
+
 
     def get_scan_file_paths(self):
         image_files = []
@@ -96,9 +113,6 @@ class ImageOrganizer:
 
             }
             img_data.modify_exif(exif_tags)
-
-            img_data.modify_comment(f"Scanned: {date_formatted}")
-            img_data.modify_exif({'Exif.Photo.DateTimeOriginal': date_formatted})
 
 
             img_data.modify_comment(f"Scanned photo: {current_date} {current_time}")
