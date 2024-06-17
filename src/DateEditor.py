@@ -155,6 +155,7 @@ class ImageDateEditor:
         if date == "":
             # If no date is entered, attempt to infer the date from the image metadata
             self.log.info("skipping")
+            self.show_alert("Skipping", "blue")
             self.load_next_image()
             return
         else:
@@ -166,7 +167,7 @@ class ImageDateEditor:
             success = self.image_organizer.save_image(self.current_image, date, 10)
             
             if success:
-                self.show_alert("Image updated", "green")
+                self.show_alert(f"Image updated: {date}", "green")
                 # Delete the current image file after successful update
                 try:
                     os.remove(self.current_image_path)
