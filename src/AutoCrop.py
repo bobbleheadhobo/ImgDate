@@ -1,16 +1,17 @@
 import cv2
 import numpy as np
 import os
-from concurrent.futures import ThreadPoolExecutor
+from LoggerConfig import setup_logger
 
 class AutoCrop:
     def __init__(self):
         self.current_image = 0
+        self.log = setup_logger("AutoCrop", "..\log\ImgDate.log")
 
     def crop_and_straighten(self, image_path):
         image = cv2.imread(image_path)
         if image is None:
-            print(f"Error: Could not load image {image_path}")
+            self.log.error(f"Could not load image: {image_path}")
             return []
 
         # Use the improved method to create a robust mask
@@ -29,7 +30,7 @@ class AutoCrop:
             rect = cv2.minAreaRect(contour)
             area = cv2.contourArea(contour)
 
-            # Debug print contour areas
+            # Debug self.log.info contour areas
 
             # Filter out too small or too large areas - adjust these values based on image characteristics
             if area < 1000000 or area > 9000000:
@@ -51,7 +52,7 @@ class AutoCrop:
         # Save the preview for debugging
         # cv2.imwrite(f"../img/processed/contours_{self.current_image}.jpg", preview_image)
 
-        print(f"Detected {len(cropped_images)} images.")
+        self.log.info(f"Detected {len(cropped_images)} images.")
         return cropped_images
 
     def create_mask(self, image):

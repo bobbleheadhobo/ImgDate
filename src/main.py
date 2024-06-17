@@ -4,6 +4,7 @@ import shutil
 import os
 from ImageOrganizer import ImageOrganizer
 from DateEditor import ImageDateEditor
+from LoggerConfig import setup_logger
 
 def main():
     parser = argparse.ArgumentParser(description="Process images or start the editor.")
@@ -11,6 +12,8 @@ def main():
     parser.add_argument("-d", "--delete", action="store_true", help="Delete files in save path before operation")
 
     args = parser.parse_args()
+    log = setup_logger("Main", "..\log\ImgDate.log")
+
 
     scans_path = r"..\img\unprocessed"
     save_path = r"..\img\processed"
@@ -39,7 +42,7 @@ def main():
     end_time = time.time()
     duration = end_time - start_time
     minutes = duration / 60
-    print(f"Time taken to process images: {minutes} minutes")
+    log.info(f"Time taken to process images: {minutes} minutes")
     
 
 if __name__ == "__main__":

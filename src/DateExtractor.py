@@ -4,6 +4,7 @@ import cv2
 import re
 import os
 from dotenv import load_dotenv
+from LoggerConfig import setup_logger
 
 import requests
 
@@ -14,6 +15,7 @@ class DateExtractor:
         self.crop_width = 0.70
         load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
+        self.log = setup_logger("DateExtractor", "..\log\ImgDate.log")
 
     def crop_date_64(self, img, base_64 = True):
         """
@@ -81,16 +83,12 @@ class DateExtractor:
         return extracted_date, confidence
 
    
-    #!instead of returing none return the current date 
-            #     current_datetime = datetime.datetime.now()
-            # current_date = current_datetime.strftime("%m/%d/%Y")
-            # current_time = current_datetime.strftime("%H:%M:%S")
-            # date_formatted = f"{current_date} {current_time}"
+
     def validate_date_format(self, text):
         """
         Validate the extracted text to see if it matches the date format mm dd 'yy.
         """
-        print(f"Extracted date: {text}")
+        self.log.info(f"Extracted date: {text}")
         # Define the regex pattern for the date format mm dd 'yy
         pattern = r'(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ]\'*(\d{2,4})'
         
@@ -115,17 +113,17 @@ class DateExtractor:
 
             # Validate the date
             if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:
-                print("Out of bounds date detected.")
+                self.log.error("Out of bounds date detected.")
                 return date, False
             
             # checks for placeholder date when not found
             if month == "01" and day == "01" and year == "1985":
-                print("Date not found in image")
+                self.log.error("Date not found in image")
                 return None, False
 
             return date, True
         else:
-            print("No valid date found in the text.")
+            self.log.error("No valid date found in the text.")
             return date, False
         
 
@@ -142,13 +140,13 @@ class DateExtractor:
         if extracted_date:
             # Validate the extracted text as a date
             clean_date, is_valid = self.validate_date_format(extracted_date)
-            print(f"Extracted date: {clean_date} | Confidence: {confidence}")
+            self.log.info(f"Extracted date: {clean_date} | Confidence: {confidence}")
             if not is_valid:
                 confidence = -1
 
             return clean_date, int(confidence)
         else:
-            print("!!No date extracted from the image.")
+            self.log.error("!!No date extracted from the image.")
             return None, -1
 
 

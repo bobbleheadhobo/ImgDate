@@ -7,6 +7,7 @@ import os
 from PIL import Image, ImageTk
 import pyexiv2
 from DateExtractor import DateExtractor
+from LoggerConfig import setup_logger
 
 class ImageDateEditor:
     def __init__(self, source_folder_path, image_organizer):
@@ -21,9 +22,10 @@ class ImageDateEditor:
         self.num_images = len(self.failed_images)
         self.image_organizer.num_images = self.num_images
         self.current_index = 0
+        self.log = setup_logger("DateEditor", "..\log\ImgDate.log")
 
     def setup_gui(self):
-        print("Starting date editor")
+        self.log.info("Starting date editor")
         # Set up the main frame
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -100,7 +102,7 @@ class ImageDateEditor:
             # Display the large image
             self.display_image()
         else:
-            print("No more images to display.")
+            self.log.info("No more images to display.")
             self.root.destroy()
 
     def display_image(self):
@@ -148,18 +150,17 @@ class ImageDateEditor:
         """
         # Get the entered date from the date entry field
         date = self.date_entry.get().strip()  # Remove leading/trailing spaces
-        print(f"Entered date: {date}")
+        self.log.info(f"Entered date: {date}")
 
         if date == "":
             # If no date is entered, attempt to infer the date from the image metadata
-            print("skipping")
+            self.log.info("skipping")
             self.load_next_image()
             return
         else:
             date = self.validate_date(date)
 
         if date is not None:  # Check specifically for None
-            print(f"Valid date: {date}")
 
             # Attempt to save the image with the updated metadata
             success = self.image_organizer.save_image(self.current_image, date, 10)
@@ -169,9 +170,9 @@ class ImageDateEditor:
                 # Delete the current image file after successful update
                 try:
                     os.remove(self.current_image_path)
-                    print(f"Deleted current image: {self.current_image_path}")
+                    self.log.info(f"Deleted current image: {self.current_image_path}")
                 except OSError as e:
-                    print(f"Error deleting file {self.current_image_path}: {e}")
+                    self.log.info(f"Error deleting file {self.current_image_path}: {e}")
             else:
                 self.show_alert("Failed to save image", "red")
 
@@ -180,7 +181,7 @@ class ImageDateEditor:
         else:
             # Handle invalid date format
             self.show_alert("Invalid Date", "red")
-            print("Invalid date format. Please enter a date in the format mm/dd/yyyy.")
+            self.log.info("Invalid date format. Please enter a date in the format mm/dd/yyyy.")
 
     def infer_date(self, date):
         date = date.strip()
@@ -208,15 +209,15 @@ class ImageDateEditor:
 
     def validate_date(self, date):
         inferred_date = self.infer_date(date)
-        print(f"Inferred date: {inferred_date}")
         if inferred_date and self.date_extractor.validate_date_format(inferred_date):
-            print(f"Validated date: {inferred_date}")
+            self.log.info(f"Validated date: {inferred_date}")
             return inferred_date
-        print(f"Invalid date: {date}")
+        self.log.error(f"Invalid date: {date}")
         return None  # Explicitly return None for invalid dates
 
     def generate_filename(self, date, confidence):
         if date is None:  # Check specifically for None
+            self.log.error("Invalid date provided for filename generation.")
             raise ValueError("Invalid date provided for filename generation.")
 
         # Continue with filename generation if date is valid

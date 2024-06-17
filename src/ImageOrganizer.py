@@ -10,6 +10,7 @@ from PIL import Image
 import pyexiv2
 from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
+from LoggerConfig import setup_logger
 
 class ImageOrganizer:
     def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed"):
@@ -20,13 +21,14 @@ class ImageOrganizer:
         self.current_image_num = 0
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
+        self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
 
         os.makedirs(save_path, exist_ok=True)
         os.makedirs(error_path, exist_ok=True)
 
     def process_images(self):
         scan_file_paths = self.get_scan_file_paths()
-        print(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
+        self.log.info(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
 
 
         with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust number of workers as needed
@@ -36,9 +38,9 @@ class ImageOrganizer:
         for cropped_images in results:
             if cropped_images:
                 for img in cropped_images:
-                    # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                    # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-                    date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                    confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
                     self.save_image(img, date, confidence)
 
     def get_scan_file_paths(self):
@@ -49,7 +51,7 @@ class ImageOrganizer:
         return image_files
 
     def process_single_scan(self, scan_path):
-        print(f"Cropping: {scan_path}")
+        self.log.info(f"Cropping: {scan_path}")
         cropped_images = self.auto_crop.crop_and_straighten(scan_path)
         self.num_images += len(cropped_images)
         return cropped_images
@@ -82,8 +84,8 @@ class ImageOrganizer:
                 date_formatted = f"{year}:{month.zfill(2)}:{day.zfill(2)} 12:00:00"  # Padding month and day with zeros
             except Exception as e:
                 date_formatted = f"{current_date} {current_time}"
-                print(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
-                print(f"Defaulting to current date: {date_formatted}")
+                self.log.error(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
+                self.log.error(f"Defaulting to current date: {date_formatted}")
                 
 
             # Update the DateTimeOriginal (Date Taken), DateTime (Date Modified), and DateTimeDigitized (Date Created) fields
@@ -101,7 +103,7 @@ class ImageOrganizer:
 
             img_data.modify_comment(f"Scanned photo: {current_date} {current_time}")
 
-            print(f"Updated exif date to {date_formatted}")
+            self.log.info(f"Updated exif date to {date_formatted}")
         finally:
             img_data.close()
 
@@ -120,12 +122,12 @@ class ImageOrganizer:
         filename = self.generate_filename(date, confidence)
         success = self.update_metadata_and_save(img, date, filename)
         if success is not None:
-            print(f"Saved image to {filename}")
+            self.log.info(f"Saved image to {filename}")
         else:
-            print(f"Failed to update metadata or save image: {filename}")
+            self.log.error(f"Failed to update metadata or save image: {filename}")
 
         self.current_image_num += 1
-        print(f"Image {self.current_image_num} of {self.num_images} processed\n")
+        self.log.info(f"Image {self.current_image_num} of {self.num_images} processed\n")
         return success
 
 
@@ -175,16 +177,16 @@ class ImageOrganizer:
         # Encode the image as JPEG before saving
         success, encoded_img = cv2.imencode('.jpg', img)
         if not success:
-            print(f"Failed to encode image")
+            self.log.error(f"Failed to encode image")
             return
 
         with open(filename, 'wb') as f:
             f.write(encoded_img.tobytes())
         
         if os.path.exists(filename):
-            print(f"Saved image to {filename}")
+            self.log.info(f"Saved image to {filename}")
         else:
-            print(f"Error saving image to {filename}")
+            self.log.error(f"Error saving image to {filename}")
 
 
 
