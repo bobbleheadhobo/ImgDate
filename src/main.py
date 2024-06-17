@@ -29,6 +29,8 @@ def main():
     image_organizer = ImageOrganizer(scans_path=scans_path)
     date_editor = ImageDateEditor(error_path, image_organizer)
 
+    log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
+
 
     if args.operation == "organize":
         image_organizer.process_images()
@@ -43,6 +45,7 @@ def main():
     duration = end_time - start_time
     minutes = duration / 60
     log.info(f"Time taken to process images: {minutes} minutes")
+
     
 
 if __name__ == "__main__":
