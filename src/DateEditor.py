@@ -12,7 +12,6 @@ from LoggerConfig import setup_logger
 class ImageDateEditor:
     def __init__(self, source_folder_path, image_organizer):
         self.root = tk.Tk()
-        self.root.title("Image Date Editor")
         self.image_organizer = image_organizer
 
         self.date_extractor = DateExtractor()
@@ -26,6 +25,11 @@ class ImageDateEditor:
 
     def setup_gui(self):
         self.log.info("Starting date editor")
+
+        self.root.title("Quick Date Editor")
+        # Make the window appear on top initially
+        self.root.attributes("-topmost", True)
+
         # Set up the main frame
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
