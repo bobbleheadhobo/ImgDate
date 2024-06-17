@@ -75,12 +75,16 @@ class DateExtractor:
 
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
 
-        extracted_date = response.json()["choices"][0]["message"]["content"]
+        try:
+            extracted_date = response.json()["choices"][0]["message"]["content"]
 
-        extracted_date = extracted_date.split("|")
-        confidence = extracted_date[1].strip().replace("confidence: ", "")
-        extracted_date = extracted_date[0].strip()
-        return extracted_date, confidence
+            extracted_date = extracted_date.split("|")
+            confidence = extracted_date[1].strip().replace("confidence: ", "")
+            extracted_date = extracted_date[0].strip()
+            return extracted_date, confidence
+        except Exception as e:
+            self.log.error(f"Error extracting date: {e}")
+            return None, -1
 
    
 
@@ -146,7 +150,7 @@ class DateExtractor:
 
             return clean_date, int(confidence)
         else:
-            self.log.error("!!No date extracted from the image.")
+            self.log.error("No date extracted from the image.")
             return None, -1
 
 
