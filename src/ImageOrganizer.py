@@ -5,23 +5,27 @@ import numpy as np
 import cv2
 import random
 import calendar
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 import pyexiv2
+from threading import Lock
 from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
 from LoggerConfig import setup_logger
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive"):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive", archive_scans = True, sort_images = True):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
         self.archive_path = archive_path
+        self.archive_scans = archive_scans
+        self.sort_images = sort_images
         self.num_images = 0
         self.current_image_num = 0
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
+        self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
 
         os.makedirs(save_path, exist_ok=True)
@@ -32,21 +36,35 @@ class ImageOrganizer:
         scan_file_paths = self.get_scan_file_paths()
         self.log.info(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
 
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for scan_path in scan_file_paths:
+                futures.append(executor.submit(self.crop_and_save_scans, scan_path))
 
-        with ThreadPoolExecutor(max_workers=10) as executor:  # Adjust number of workers as needed
-            results = list(executor.map(self.process_single_scan, scan_file_paths))
-        
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    self.log.error(f"Error processing scan: {e}")
 
-        for scan_path, cropped_images in zip(scan_file_paths, results):
+    def crop_and_save_scans(self, scan_path):
+        try:
+            cropped_images = self.crop_single_scan(scan_path)
             if cropped_images:
                 for img in cropped_images:
-                    date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                    confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-                    # date, confidence = self.date_extractor.extract_and_validate_date(img)
-                    self.save_image(img, date, confidence)
-                
-            # Move scan file to archive folder after processing
-            self.move_scan_to_archive(scan_path)
+                    self.date_and_save_image(img)
+
+            if self.archive_scans:
+                self.move_scan_to_archive(scan_path)
+        except Exception as e:
+            self.log.error(f"Error processing {scan_path}: {e}")
+
+    def date_and_save_image(self, img):
+        # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+        # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+        date, confidence = self.date_extractor.extract_and_validate_date(img)
+        self.save_image(img, date, confidence)
+
 
     def move_scan_to_archive(self, scan_path):
         """
@@ -67,10 +85,11 @@ class ImageOrganizer:
                 image_files.append(os.path.join(self.scans_path, file))
         return image_files
 
-    def process_single_scan(self, scan_path):
+    def crop_single_scan(self, scan_path):
         self.log.info(f"Cropping: {scan_path}")
         cropped_images = self.auto_crop.crop_and_straighten(scan_path)
-        self.num_images += len(cropped_images)
+        with self.lock:
+            self.num_images += len(cropped_images)
         return cropped_images
     
     def update_metadata_and_save(self, img, date, filename):
@@ -84,6 +103,7 @@ class ImageOrganizer:
         temp_filename = 'temp_image.jpg'
         pil_img.save(temp_filename, format="JPEG")
 
+        img_data = None
         try:
             # Load the image file with pyexiv2
             img_data = pyexiv2.Image(temp_filename)
@@ -134,15 +154,16 @@ class ImageOrganizer:
         Save the image with the extracted date in the filename and update metadata.
         """
         filename = self.generate_filename(date, confidence)
-        success = self.update_metadata_and_save(img, date, filename)
-        if success is not None:
-            self.log.info(f"Saved image to {filename}")
-        else:
-            self.log.error(f"Failed to update metadata or save image: {filename}")
+        with self.lock:
+            success = self.update_metadata_and_save(img, date, filename)
+            if success:
+                self.log.info(f"Saved image to {filename}")
+            else:
+                self.log.error(f"Failed to update metadata or save image: {filename}")
 
-        self.current_image_num += 1
-        self.log.info(f"Image {self.current_image_num} of {self.num_images} processed\n")
-        return success
+            self.current_image_num += 1
+            self.log.info(f"Image {self.current_image_num} of {self.num_images} processed\n")
+            return success
 
 
     def generate_filename(self, date, confidence):
@@ -151,16 +172,20 @@ class ImageOrganizer:
         """
         random_number = random.randint(1000, 9999)
 
-        if date is not None:
-            formatted_date = date.replace('/', '-')
-            if confidence < 9:
-                return rf"{self.error_path}\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
-            
-            year, month_name = self.extract_year_month(date)
-            self.ensure_directories_exist(year, month_name)
-            return rf"{self.save_path}\{year}\{month_name}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
-        else:
-            return rf"{self.error_path}\{self.current_image_num}_date_not_found_{random_number}.jpg"
+        with self.lock: # thread safety for self.current_image_num
+            if date is not None:
+                formatted_date = date.replace('/', '-')
+                if confidence < 9:
+                    return rf"{self.error_path}\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
+                
+                if self.sort_images:
+                    year, month_name = self.extract_year_month(date)
+                    self.ensure_directories_exist(year, month_name)
+                    return rf"{self.save_path}\{year}\{month_name}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
+                else:
+                    return rf"{self.save_path}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
+            else:
+                return rf"{self.error_path}\{self.current_image_num}_date_not_found_{random_number}.jpg"
 
     def extract_year_month(self, date):
         """
