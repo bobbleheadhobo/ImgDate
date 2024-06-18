@@ -36,7 +36,7 @@ class AutoCrop:
             if area < 1000000 or area > 9000000:
                 continue
 
-            # Draw the rotated rectangle for preview
+            # debug Draw the rotated rectangle for preview
             # box = cv2.boxPoints(rect)
             # box = np.intp(box)
             # cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)

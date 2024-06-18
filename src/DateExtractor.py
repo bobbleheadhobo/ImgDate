@@ -1,5 +1,6 @@
 import base64
 import datetime
+from time import sleep
 import cv2
 import re
 import os
@@ -40,7 +41,7 @@ class DateExtractor:
         # return base64_img
         return cropped_img
 
-    def read_date(self, base64_image):
+    def read_date(self, base64_image, retries = 3):
         """
         Use gpt4o API to extract text from the processed image.
         """
@@ -58,7 +59,7 @@ class DateExtractor:
             "content": [
                 {
                 "type": "text",
-                "text": "This is a film image that contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. The date will be in the format 'YY MM DD. A way to differentiate the two dates is that the year will always start an apostrophe. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with \"01 01 \'85 | confidence: -1\" as a placeholder."
+                "text": "This is a film image that contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. The date will be in the format 'YY MM DD. A way to differentiate the two dates is that the year will always start an apostrophe. Please read the date and provide it in the format MM DD \'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example \"12 07 \'01 | confidence: 10\". If the date is unclear or cannot be read, please respond with not found | confidence: -1\" as a placeholder."
                 },
                 {
                 "type": "image_url",
@@ -73,18 +74,21 @@ class DateExtractor:
         "max_tokens": 300
         }
 
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-
-        try:
-            extracted_date = response.json()["choices"][0]["message"]["content"]
-
-            extracted_date = extracted_date.split("|")
-            confidence = extracted_date[1].strip().replace("confidence: ", "")
-            extracted_date = extracted_date[0].strip()
-            return extracted_date, confidence
-        except Exception as e:
-            self.log.error(f"Error extracting date: {e}")
-            return None, -1
+        for attempt in range(retries):
+            try:
+                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                response.raise_for_status()  # Raise an HTTPError for bad responses
+                extracted_date = response.json()["choices"][0]["message"]["content"]
+                extracted_date = extracted_date.split("|")
+                confidence = extracted_date[1].strip().replace("confidence: ", "")
+                extracted_date = extracted_date[0].strip()
+                return extracted_date, confidence
+            except requests.exceptions.RequestException as e:
+                self.log.error(f"Error extracting date (attempt {attempt + 1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    sleep(2 * attempt)  # Exponential backoff
+                else:
+                    return None, -1
 
    
 
@@ -119,16 +123,15 @@ class DateExtractor:
             if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:
                 self.log.error("Out of bounds date detected.")
                 return date, False
-            
-            # checks for placeholder date when not found
-            if month == "01" and day == "01" and year == "1985":
-                self.log.error("Date not found in image")
-                return None, False
 
             return date, True
         else:
-            self.log.error("No valid date found in the text.")
-            return date, False
+            self.log.error("No valid date found in image.")
+            # check if the text contains "unknown"
+            if "not found" in text.lower():
+                return None, False
+            
+            return text, False
         
 
     def extract_and_validate_date(self, img):
