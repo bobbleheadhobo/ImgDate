@@ -9,7 +9,7 @@ from LoggerConfig import setup_logger
 def main():
     parser = argparse.ArgumentParser(description="Process images or start the editor.")
     parser.add_argument("operation", choices=["organize", "process", "edit"], help="Operation to perform")
-    parser.add_argument("-d", "--delete", action="store_true", help="Delete files in save path before operation")
+    parser.add_argument("-d", "--delete", action="store_true", help="(Debug) Delete files in save path before operation")
 
     args = parser.parse_args()
     log = setup_logger("Main", "..\log\ImgDate.log")
@@ -19,14 +19,16 @@ def main():
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
+    start_time = time.time()
+
+    # mainly used for debugging
     if args.delete:
         shutil.rmtree(save_path, ignore_errors=True)
         os.makedirs(save_path, exist_ok=True)
 
 
-    start_time = time.time()
 
-    image_organizer = ImageOrganizer(scans_path=scans_path)
+    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False)
     date_editor = ImageDateEditor(error_path, image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
@@ -42,9 +44,12 @@ def main():
         date_editor.start()
 
     end_time = time.time()
-    duration = end_time - start_time
-    minutes = duration / 60
-    log.info(f"Time taken to process images: {minutes} minutes")
+    seconds = end_time - start_time
+    if seconds < 60:
+        log.info(f"Time taken to process images: {seconds} seconds")
+    else:
+        minutes = seconds / 60
+        log.info(f"Time taken to process images: {minutes} minutes")
 
     
 
