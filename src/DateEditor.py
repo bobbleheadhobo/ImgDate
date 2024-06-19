@@ -52,15 +52,37 @@ class ImageDateEditor:
         self.date_entry.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
         self.date_entry.focus_set()  # Automatically focus on the entry widget
 
+        # Create a frame to hold the date label and the checkbox
+        self.date_frame = ttk.Frame(self.main_frame)
+        self.date_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
         # Label to show the current image date
-        self.date_label = tk.Label(self.main_frame, bg="lightgrey", font=("Arial", 10))
-        self.date_label.pack(side=tk.BOTTOM, fill=tk.X, padx=1, pady=1)
+        self.date_label = tk.Label(self.date_frame, bg="lightgrey", font=("Arial", 10))
+        self.date_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1, pady=1)
+
+        # Create a BooleanVar to store the state of the checkbox
+        self.magnify_date = tk.BooleanVar(value=True)
+
+        # Create the Checkbutton widget
+        self.checkbox = tk.Checkbutton(self.date_frame, text="Magnify Date", variable=self.magnify_date, command=self.magnify_date_checkbox_toggled)
+        self.checkbox.pack(side=tk.RIGHT)
+        
 
         # Bind Enter key to save the date
         self.date_entry.bind("<Return>", lambda event: self.save_date())
 
         # Load the first image
         self.load_next_image()
+
+
+    
+    def magnify_date_checkbox_toggled(self):
+        if self.magnify_date.get():
+            canvas_width = self.canvas.winfo_width()
+            canvas_height = self.canvas.winfo_height()
+            self.display_small_image(canvas_width, canvas_height)
+        else:
+            self.canvas.delete("small_image")
 
     def update_date_label(self, text):
         self.date_label.config(text=text)
@@ -124,8 +146,9 @@ class ImageDateEditor:
             # Update the canvas with the new image
             self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo_image)
 
-            # Display the small image in the bottom right corner
-            self.display_small_image(canvas_width, canvas_height)
+            if self.magnify_date.get():
+                # Display the small image in the bottom right corner
+                self.display_small_image(canvas_width, canvas_height)
 
     def display_small_image(self, canvas_width, canvas_height):
         if self.current_image is None:
@@ -142,7 +165,7 @@ class ImageDateEditor:
             y = canvas_height - int(canvas_height * 0.4) 
 
             # Overlay the small image on the canvas
-            self.canvas.create_image(x, y, anchor=tk.NW, image=self.small_photo_image)
+            self.canvas.create_image(x, y, anchor=tk.NW, image=self.small_photo_image, tags="small_image")
 
     def on_resize(self, event):
         self.display_image()
