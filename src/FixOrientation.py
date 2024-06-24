@@ -23,20 +23,15 @@ class ImageOrientationCorrector:
     def determine_orientation(self, keypoints):
         right_eye, _, left_eye, _, nose = keypoints
         eyes_center = ((left_eye[0] + right_eye[0]) / 2, (left_eye[1] + right_eye[1]) / 2)
-        print(keypoints)
-        print(eyes_center)
 
-        if right_eye[1] > left_eye[1]:
-            if np.arctan2(right_eye[1] - left_eye[1], right_eye[0] - left_eye[0]) > 0:
-                if nose[0] > eyes_center[0]:
-                    return 'right_side_up'
-        else:
-            if np.arctan2(left_eye[1] - right_eye[1], left_eye[0] - right_eye[0]) > 0:
-                if nose[0] < eyes_center[0]:
-                    return 'left_side_up'
 
-        if nose[1] < eyes_center[1]:
+        if right_eye[1] > left_eye[1] and nose[0] > eyes_center[0]:
+            return 'right_side_up'
+        elif left_eye[1] > right_eye[1] and nose[0] < eyes_center[0]:
+            return 'left_side_up'
+        elif nose[1] < eyes_center[1]:
             return 'upside_down'
+
 
         return 'correct'
 
@@ -52,29 +47,22 @@ class ImageOrientationCorrector:
         return image
 
     def process_image(self, image):
-        resized_image = self.resize_image(image, width=800)
 
         for angle in [0, 90, 180, 270]:
-            rotated_image = self.rotate_image(resized_image, angle)
+            rotated_image = self.rotate_image(image, angle)
             faces_and_landmarks = self.detect_faces_and_landmarks(rotated_image)
 
             if faces_and_landmarks:
-                bbox, keypoints = faces_and_landmarks[0]
+                _, keypoints = faces_and_landmarks[0]
                 orientation = self.determine_orientation(keypoints)
                 print(f"Detected orientation: {orientation}")
 
-                self.draw_landmarks(rotated_image, bbox, keypoints)
+                # self.draw_landmarks(rotated_image, bbox, keypoints)
 
-                return rotated_image  # Return the image in the detected orientation
+                return rotated_image  # Returns first face it finds
 
         print("No faces detected.")
-        return resized_image  # Return the resized image if no faces are detected
-
-    def resize_image(self, image, width):
-        # ratio = width / float(image.shape[1])
-        # dim = (width, int(image.shape[0] * ratio))
-        # return cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
-        return image
+        return image  # Return the resized image if no faces are detected
 
     def draw_landmarks(self, image, bbox, keypoints):
         (x, y, w, h) = (bbox.left(), bbox.top(), bbox.width(), bbox.height())
@@ -105,7 +93,7 @@ class ImageOrientationCorrector:
 
 # Example usage:
 if __name__ == "__main__":
-    input_folder = r'..\img\test\orientation'
+    input_folder = r'..\img\processed'
     output_folder = r'..\img\test\orientation\new'
 
     predictor_path = 'shape_predictor_5_face_landmarks.dat'
