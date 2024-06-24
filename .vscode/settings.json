@@ -2,6 +2,7 @@
     "cSpell.words": [
         "ascontiguousarray",
         "astype",
+        "dlib",
         "dtype",
         "frombuffer",
         "imdecode",
