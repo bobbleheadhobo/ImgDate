@@ -8,11 +8,7 @@ class AutoCrop:
         self.current_image = 0
         self.log = setup_logger("AutoCrop", "..\log\ImgDate.log")
 
-    def crop_and_straighten(self, image_path):
-        image = cv2.imread(image_path)
-        if image is None:
-            self.log.error(f"Could not load image: {image_path}")
-            return []
+    def crop_and_straighten(self, image):
 
         # Use the improved method to create a robust mask
         mask = self.create_mask(image)

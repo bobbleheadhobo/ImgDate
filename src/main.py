@@ -28,7 +28,7 @@ def main():
 
 
 
-    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False)
+    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, date_images=True, crop_images=True)
     date_editor = ImageDateEditor(error_path, image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")

@@ -14,12 +14,15 @@ from DateExtractor import DateExtractor
 from LoggerConfig import setup_logger
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive", archive_scans = True, sort_images = True):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
         self.archive_path = archive_path
         self.archive_scans = archive_scans
+        self.crop_images = crop_images
+        self.date_images = date_images
+        self.fix_orientation = fix_orientation
         self.sort_images = sort_images
         self.num_images = 0
         self.current_image_num = 0
@@ -48,22 +51,41 @@ class ImageOrganizer:
                     self.log.error(f"Error processing scan: {e}")
 
     def crop_and_save_scans(self, scan_path):
+        scan = self.load_scan(scan_path)
+        original_filename = os.path.basename(scan_path)  # Get the original filename
         try:
-            cropped_images = self.crop_single_scan(scan_path)
+            if self.crop_images:
+                self.log.info(f"Cropping: {scan_path}")
+                cropped_images = self.crop_single_scan(scan)
+            else:
+                cropped_images = [scan]
+
             if cropped_images:
                 for img in cropped_images:
-                    self.date_and_save_image(img)
+                    if self.date_images:
+                        date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                        confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                        # date, confidence = self.date_extractor.extract_and_validate_date(img)
+                    else:
+                        date = "01/01/1111" #place holder date wont actually be used in file name
+                        confidence = 10
+
+                    if self.fix_orientation:
+                        pass
+
+                    self.save_image(img, date, confidence, original_filename)
+
 
             if self.archive_scans:
                 self.move_scan_to_archive(scan_path)
         except Exception as e:
             self.log.error(f"Error processing {scan_path}: {e}")
 
-    def date_and_save_image(self, img):
-        # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-        # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-        date, confidence = self.date_extractor.extract_and_validate_date(img)
-        self.save_image(img, date, confidence)
+    # def date_and_save_image(self, img):
+    #     # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+    #     # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+    #     date, confidence = self.date_extractor.extract_and_validate_date(img)
+    #     self.save_image(img, date, confidence)
 
 
     def move_scan_to_archive(self, scan_path):
@@ -85,12 +107,19 @@ class ImageOrganizer:
                 image_files.append(os.path.join(self.scans_path, file))
         return image_files
 
-    def crop_single_scan(self, scan_path):
-        self.log.info(f"Cropping: {scan_path}")
-        cropped_images = self.auto_crop.crop_and_straighten(scan_path)
+    def crop_single_scan(self, scan):
+        cropped_images = self.auto_crop.crop_and_straighten(scan)
         with self.lock:
             self.num_images += len(cropped_images)
         return cropped_images
+    
+    def load_scan(self, scan_path):
+        image = cv2.imread(scan_path)
+        if image is None:
+            self.log.error(f"Could not load image: {scan_path}")
+            return None
+        
+        return image
     
     def update_metadata_and_save(self, img, date, filename):
         """
@@ -149,12 +178,12 @@ class ImageOrganizer:
 
 
 
-    def save_image(self, img, date, confidence):
+    def save_image(self, img, date, confidence, original_filename):
         """
         Save the image with the extracted date in the filename and update metadata.
         """
-        filename = self.generate_filename(date, confidence)
         with self.lock:
+            filename = self.generate_filename(date, confidence, original_filename)
             success = self.update_metadata_and_save(img, date, filename)
             if success:
                 self.log.info(f"Saved image to {filename}")
@@ -166,26 +195,31 @@ class ImageOrganizer:
             return success
 
 
-    def generate_filename(self, date, confidence):
+    def generate_filename(self, date, confidence, original_filename):
         """
         Generate a filename based on the date and confidence.
         """
         random_number = random.randint(1000, 9999)
 
-        with self.lock: # thread safety for self.current_image_num
-            if date is not None:
-                formatted_date = date.replace('/', '-')
-                if confidence < 9:
-                    return rf"{self.error_path}\{self.current_image_num}_date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
-                
-                if self.sort_images:
-                    year, month_name = self.extract_year_month(date)
-                    self.ensure_directories_exist(year, month_name)
-                    return rf"{self.save_path}\{year}\{month_name}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
+        if date is not None:
+            formatted_date = date.replace('/', '-')
+            if confidence < 9:
+                return rf"{self.error_path}\date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
+            
+            if self.sort_images:
+                year, month_name = self.extract_year_month(date)
+                self.ensure_directories_exist(year, month_name)
+                if self.date_images:
+                    return rf"{self.save_path}\{year}\{month_name}\date_{formatted_date}_{random_number}.jpg"
                 else:
-                    return rf"{self.save_path}\{self.current_image_num}_date_{formatted_date}_{random_number}.jpg"
+                    return rf"{self.save_path}\{year}\{month_name}\{original_filename}"
             else:
-                return rf"{self.error_path}\{self.current_image_num}_date_not_found_{random_number}.jpg"
+                if self.date_images:
+                    return rf"{self.save_path}\date_{formatted_date}_{random_number}.jpg"
+                else:
+                    return rf"{self.save_path}\{original_filename}"
+        else:
+            return rf"{self.error_path}\date_not_found_{random_number}.jpg"
 
     def extract_year_month(self, date):
         """
