@@ -3,7 +3,7 @@ import dlib
 import numpy as np
 import os
 
-class OrientationCorrector:
+class FixOrientation:
     def __init__(self, predictor_path='shape_predictor_5_face_landmarks.dat'):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(predictor_path)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     output_folder = r'..\img\test\orientation\new'
 
     predictor_path = 'shape_predictor_5_face_landmarks.dat'
-    corrector = OrientationCorrector(predictor_path)
+    corrector = FixOrientation(predictor_path)
     corrector.process_images_in_folder(input_folder, output_folder)
 
     print("Processing completed.")

@@ -11,6 +11,7 @@ import pyexiv2
 from threading import Lock
 from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
+from FixOrientation import FixOrientation
 from LoggerConfig import setup_logger
 
 class ImageOrganizer:
@@ -28,6 +29,10 @@ class ImageOrganizer:
         self.current_image_num = 0
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
+
+        if self.fix_orientation:
+            self.orientation = FixOrientation()
+            
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
 
