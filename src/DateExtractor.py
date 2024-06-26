@@ -5,6 +5,7 @@ import cv2
 import re
 import os
 from dotenv import load_dotenv
+import pyexiv2
 from LoggerConfig import setup_logger
 
 import requests
@@ -17,6 +18,7 @@ class DateExtractor:
         load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.log = setup_logger("DateExtractor", "..\log\ImgDate.log")
+        self.MIN_YEAR = 1985
 
     def crop_date_64(self, img, base_64 = True):
         """
@@ -106,7 +108,6 @@ class DateExtractor:
         if match:
             month, day, year = match.groups()
 
-
             # check century
             current_year_full = str(datetime.datetime.now().year)
 
@@ -120,7 +121,7 @@ class DateExtractor:
             date = f"{month.zfill(2)}/{day.zfill(2)}/{year}"
 
             # Validate the date
-            if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < 1985:
+            if int(month) > 12 or int(day) > 31 or int(year) > int(current_year_full) or int(year) < self.MIN_YEAR:
                 self.log.error("Out of bounds date detected.")
                 return date, False
 
@@ -156,6 +157,45 @@ class DateExtractor:
             self.log.error("No date extracted from the image.")
             return None, -1
 
+    def read_image_date(self, image_path):
+        """
+        Reads the EXIF data from the given image and returns a dictionary of date-related EXIF fields
+        that are not None. If all date-related EXIF fields are None, returns None.
+        """
+        # Load the image and read its EXIF data
+        img_data = pyexiv2.Image(image_path)
+        exif = img_data.read_exif()
+        # print(f"exif {exif}")
+        
+        # Initialize an empty dictionary to store the date-related EXIF fields
+        exif_date = {}
+        
+        # List of tuples containing the EXIF key and the corresponding dictionary key
+        keys = [
+            ('Exif.Image.DateTime', 'DateTime'),
+            ('Exif.Photo.DateTimeOriginal', 'DateTimeOriginal'),
+            ('Exif.Photo.DateTimeDigitized', 'DateTimeDigitized'),
+        ]
+        
+        try:
+            # Iterate through the keys and add non-None values to the date dictionary
+            for exif_key, date_key in keys:
+                if exif_key in exif and exif[exif_key]:  # Check if the EXIF key exists and its value is not None or empty
+                    exif_date[date_key] = exif[exif_key]
+                else:
+                    exif_date[date_key] = "unknown"
+            
+            exif_date['comment'] = img_data.read_comment()
+            # If the date dictionary is empty, set it to None
+            if not exif_date:
+                self.log.warn("No exif date found in image.")
+                exif_date = None
+            
+        except KeyError as e:
+            self.log.error(f"Error getting exif data from image: {e}")
+            exif_date = None
+
+        return exif_date
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ def main():
     log = setup_logger("Main", "..\log\ImgDate.log")
 
 
-    scans_path = r"..\img\unprocessed"
+    scans_path = r"..\img\test\orientation"
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
@@ -28,7 +28,7 @@ def main():
 
 
 
-    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, fix_orientation=False)
+    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, date_images=False, fix_orientation=True)
     date_editor = ImageDateEditor(error_path, image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
@@ -40,7 +40,6 @@ def main():
         date_editor.start()
     elif args.operation == "process":
         image_organizer.process_images()
-
         date_editor.start()
 
     end_time = time.time()

@@ -32,7 +32,7 @@ class ImageOrganizer:
 
         if self.fix_orientation:
             self.orientation = FixOrientation()
-            
+
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
 
@@ -71,14 +71,18 @@ class ImageOrganizer:
                         date = "01/01/1985"  # Dummy date, replace with actual logic if needed
                         confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
                         # date, confidence = self.date_extractor.extract_and_validate_date(img)
+                        original_exif_data = None
                     else:
-                        date = "01/01/1111" #place holder date wont actually be used in file name
+                        #*TODO read in the date from the image meta data and set it here
                         confidence = 10
+                        date = "01/01/1111" # place holder date wont actually be used
+                        original_exif_data = self.date_extractor.read_image_date(scan_path)
+
 
                     if self.fix_orientation:
                         pass
 
-                    self.save_image(img, date, confidence, original_filename)
+                    self.save_image(img, date, confidence, original_filename, original_exif_data)
 
 
             if self.archive_scans:
@@ -126,7 +130,8 @@ class ImageOrganizer:
         
         return image
     
-    def update_metadata_and_save(self, img, date, filename):
+    #*TODO save the original date and time back to the image if not dating images
+    def update_metadata_and_save(self, img, date, filename, original_exif_data):
         """
         Update the image metadata with the extracted date in the format mm/dd/yyyy and save to file.
         """
@@ -141,7 +146,7 @@ class ImageOrganizer:
         try:
             # Load the image file with pyexiv2
             img_data = pyexiv2.Image(temp_filename)
-            img_data.read_exif()
+            # img_data.read_exif()
 
             # get current date and time
             current_datetime = datetime.datetime.now()
@@ -158,38 +163,68 @@ class ImageOrganizer:
                 self.log.error(f"Error in date format: {date}. Expected format is mm/dd/yyyy.")
                 self.log.error(f"Defaulting to current date: {date_formatted}")
                 
+            #if not dating images, save the original date and time back to the image
+            if not self.date_images and original_exif_data is not None:
+                exif_tags = {
+                    'Exif.Photo.DateTimeOriginal': original_exif_data["DateTimeOriginal"],   # Date Taken
+                    'Exif.Image.DateTime': original_exif_data["DateTime"],           # Date Modified
+                    'Exif.Photo.DateTimeDigitized': original_exif_data["DateTimeDigitized"]   # Date Created
+                }
+                img_data.modify_comment(f"{original_exif_data['comment']} \nRe-processed photo: {current_date} {current_time}")
+            else:
+                # Update the DateTimeOriginal (Date Taken), DateTime (Date Modified), and DateTimeDigitized (Date Created) fields
+                exif_tags = {
+                    'Exif.Photo.DateTimeOriginal': date_formatted,   # Date Taken
+                    'Exif.Image.DateTime': date_formatted,           # Date Modified
+                    'Exif.Photo.DateTimeDigitized': date_formatted   # Date Created
+                }
+                img_data.modify_comment(f"Processed Scanned photo: {current_date} {current_time}")
 
-            # Update the DateTimeOriginal (Date Taken), DateTime (Date Modified), and DateTimeDigitized (Date Created) fields
-            exif_tags = {
-                'Exif.Photo.DateTimeOriginal': date_formatted,   # Date Taken
-                'Exif.Image.DateTime': date_formatted,           # Date Modified
-                'Exif.Photo.DateTimeDigitized': date_formatted   # Date Created
-
-            }
             img_data.modify_exif(exif_tags)
 
+            try:
+                img_exif = img_data.read_exif()
+                if img_exif.get('Exif.Photo.DateTimeOriginal'):
+                    updated_date = img_exif.get('Exif.Photo.DateTimeOriginal')
+                elif img_exif.get('Exif.Image.DateTime'):
+                    updated_date = img_exif.get('Exif.Image.DateTime')
+                elif img_exif.get('Exif.Photo.DateTimeDigitized'):
+                    updated_date = img_exif.get('Exif.Photo.DateTimeDigitized')
+                else:
+                    updated_date = "Unknown"
+            except Exception as e:
+                self.log.error(f"Error reading updated date from exif data: {e}")
+                updated_date = "Unknown"
 
-            img_data.modify_comment(f"Scanned photo: {current_date} {current_time}")
-
-            self.log.info(f"Updated exif date to {date_formatted}")
+            self.log.info(f"Updated exif date to {updated_date}")
         finally:
             img_data.close()
 
-        # Rename the temp file to the final filename
-        os.rename(temp_filename, filename)
+        # Rename the temporary file to the final filename
+        try:
+            os.rename(temp_filename, filename)
+        except FileNotFoundError:
+            self.log.error(f"The file {temp_filename} does not exist. Cannot rename to {filename}.")
+            return False
+        except PermissionError:
+            self.log.error(f"Permission denied when trying to rename {temp_filename} to {filename}.")
+            return False
+        except Exception as e:
+            self.log.error(f"An unexpected error occurred while renaming {temp_filename} to {filename}: {e}")
+            return False
 
         #check if success
         return os.path.exists(filename)
 
 
 
-    def save_image(self, img, date, confidence, original_filename):
+    def save_image(self, img, date, confidence, original_filename, original_exif_data):
         """
         Save the image with the extracted date in the filename and update metadata.
         """
         with self.lock:
             filename = self.generate_filename(date, confidence, original_filename)
-            success = self.update_metadata_and_save(img, date, filename)
+            success = self.update_metadata_and_save(img, date, filename, original_exif_data)
             if success:
                 self.log.info(f"Saved image to {filename}")
             else:
