@@ -16,7 +16,7 @@ def main():
 
 
     scans_path = r"..\img\test\new"
-    save_path = r"..\img\orientation\new"
+    save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 
     start_time = time.time()
@@ -34,8 +34,8 @@ def main():
 
 
 
-    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, fix_orientation=True)
-    date_editor = ImageDateEditor(error_path, image_organizer)
+    image_organizer = ImageOrganizer(save_path=save_path, scans_path=scans_path, archive_scans=False, sort_images=False, fix_orientation=True)
+    date_editor = ImageDateEditor(source_folder_path=save_path, image_organizer=image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
 

@@ -17,7 +17,7 @@ class ImageDateEditor:
         self.date_extractor = DateExtractor()
         self.current_image_path = None
         self.current_image = None
-        self.failed_images = self.get_failed_images()
+        self.failed_images = self.get_failed_images(source_path=source_folder_path)
         self.num_images = len(self.failed_images)
         self.image_organizer.num_images = self.num_images
         self.current_index = 0
@@ -101,9 +101,8 @@ class ImageDateEditor:
         self.date_entry.delete(0, tk.END)  # Clear the entry widget
         self.date_entry.insert(0, "")  # Reset the entry widget
 
-    def get_failed_images(self):
-        failed_path = self.image_organizer.error_path
-        return [os.path.join(failed_path, file) for file in os.listdir(failed_path) if file.endswith(".jpg")]
+    def get_failed_images(self, source_path):
+        return [os.path.join(source_path, file) for file in os.listdir(source_path) if file.endswith(".jpg")]
 
     def get_image_date(self):
         img_data = pyexiv2.Image(self.current_image_path)
@@ -191,7 +190,9 @@ class ImageDateEditor:
         if date is not None:  # Check specifically for None
 
             # Attempt to save the image with the updated metadata
-            success = self.image_organizer.save_image(self.current_image, date, 10)
+            existing_exif_data = None
+            file_name = self.generate_filename(date, 10)
+            success = self.image_organizer.save_image(self.current_image, date, 10, file_name, existing_exif_data)
             
             if success:
                 self.show_alert(f"Image updated: {date}", "green")

@@ -69,12 +69,11 @@ class ImageOrganizer:
                 orientation = FixOrientation() if self.fix_orientation else None
                 for img in cropped_images:
                     if self.date_images:
-                        date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                        confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-                        # date, confidence = self.date_extractor.extract_and_validate_date(img)
+                        # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
+                        # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
+                        date, confidence = self.date_extractor.extract_and_validate_date(img)
                         original_exif_data = None
                     else:
-                        #*TODO read in the date from the image meta data and set it here
                         confidence = 10
                         date = "01/01/1111" # place holder date wont actually be used
                         original_exif_data = self.date_extractor.read_image_date(scan_path)
