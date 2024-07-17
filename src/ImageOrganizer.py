@@ -80,7 +80,10 @@ class ImageOrganizer:
 
 
                     if self.fix_orientation:
-                        pass
+                        try:
+                            img = self.orientation.process_image(img)
+                        except Exception as e:
+                            self.log.error(f"Error in FixOrientation: {e}")
 
                     self.save_image(img, date, confidence, original_filename, original_exif_data)
 
@@ -89,12 +92,6 @@ class ImageOrganizer:
                 self.move_scan_to_archive(scan_path)
         except Exception as e:
             self.log.error(f"Error processing {scan_path}: {e}")
-
-    # def date_and_save_image(self, img):
-    #     # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-    #     # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
-    #     date, confidence = self.date_extractor.extract_and_validate_date(img)
-    #     self.save_image(img, date, confidence)
 
 
     def move_scan_to_archive(self, scan_path):
@@ -305,7 +302,7 @@ class ImageOrganizer:
 
 if __name__ == "__main__":
     # Example usage
-    scans_path = r"..\img\test\New folder"
+    scans_path = r"..\img\test\skewed"
     save_path = r"..\img\processed"
     error_path = rf"{save_path}\Failed"
 

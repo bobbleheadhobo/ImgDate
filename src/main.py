@@ -15,20 +15,26 @@ def main():
     log = setup_logger("Main", "..\log\ImgDate.log")
 
 
-    scans_path = r"..\img\test\orientation"
-    save_path = r"..\img\processed"
+    scans_path = r"..\img\test\new"
+    save_path = r"..\img\orientation\new"
     error_path = rf"{save_path}\Failed"
 
     start_time = time.time()
 
     # mainly used for debugging
     if args.delete:
-        shutil.rmtree(save_path, ignore_errors=True)
+        log.info("Deleting files in save path before operation")
+        try:
+            shutil.rmtree(save_path)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            log.error(f"Failed to delete files in save path: {e}")
         os.makedirs(save_path, exist_ok=True)
 
 
 
-    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, date_images=False, fix_orientation=True)
+    image_organizer = ImageOrganizer(scans_path=scans_path, archive_scans=False, sort_images=False, fix_orientation=False)
     date_editor = ImageDateEditor(error_path, image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
