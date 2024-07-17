@@ -30,8 +30,8 @@ class ImageOrganizer:
         self.auto_crop = AutoCrop()
         self.date_extractor = DateExtractor()
 
-        if self.fix_orientation:
-            self.orientation = FixOrientation()
+        # if self.fix_orientation:
+        #     self.orientation = FixOrientation()
 
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
@@ -66,6 +66,7 @@ class ImageOrganizer:
                 cropped_images = [scan]
 
             if cropped_images:
+                orientation = FixOrientation() if self.fix_orientation else None
                 for img in cropped_images:
                     if self.date_images:
                         date = "01/01/1985"  # Dummy date, replace with actual logic if needed
@@ -81,7 +82,7 @@ class ImageOrganizer:
 
                     if self.fix_orientation:
                         try:
-                            img = self.orientation.process_image(img)
+                            img = orientation.process_image(img)
                         except Exception as e:
                             self.log.error(f"Error in FixOrientation: {e}")
 

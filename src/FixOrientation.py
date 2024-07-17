@@ -52,7 +52,7 @@ class FixOrientation:
             _, keypoints = result
             orientation = self.determine_orientation(keypoints)
             print(f"Detected orientation: {orientation}")
-            return self.apply_orientation(original_image, 0)
+            return original_image
 
         # If no face found, try other orientations
         for angle in [90, 180, 270]:
@@ -91,7 +91,7 @@ class FixOrientation:
                     continue
 
                 corrected_image = self.process_image(image)
-                cv2.imwrite(output_path, corrected_image)
+                cv2.imwrite(output_path, corrected_image, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
                 
                 end_time = time.time()
                 processing_time = end_time - start_time
@@ -108,8 +108,11 @@ class FixOrientation:
             print(f"Average processing time per image: {avg_time:.2f} seconds")
 
 if __name__ == "__main__":
-    input_folder = r'..\img\processed'
-    output_folder = r'..\img\processed\corrected'
+    # input_folder = r'..\img\processed'
+    # output_folder = r'..\img\processed\corrected'
+    
+    input_folder = r'C:\Users\super\OneDrive\Desktop\processed\processed'
+    output_folder = r'C:\Users\super\OneDrive\Desktop\processed\corrected1'
 
     predictor_path = 'shape_predictor_5_face_landmarks.dat'
     corrector = FixOrientation(predictor_path)
