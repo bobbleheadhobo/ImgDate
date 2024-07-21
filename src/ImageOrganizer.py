@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import shutil
 import numpy as np
 import cv2
@@ -241,22 +242,62 @@ class ImageOrganizer:
         if date is not None:
             formatted_date = date.replace('/', '-')
             if confidence < 9:
-                return rf"{self.error_path}\date_{formatted_date}_confidence-{confidence}_{random_number}.jpg"
+                file_path = rf"{self.error_path}\date_{formatted_date}_confidence-{confidence}.jpg"
+                return self.duplicate_check(file_path)
             
             if self.sort_images:
                 year, month_name = self.extract_year_month(date)
                 self.ensure_directories_exist(year, month_name)
                 if self.date_images:
-                    return rf"{self.save_path}\{year}\{month_name}\date_{formatted_date}_{random_number}.jpg"
+                    file_path = rf"{self.save_path}\{year}\{month_name}\date_{formatted_date}.jpg"
+                    return self.duplicate_check(file_path)
                 else:
-                    return rf"{self.save_path}\{year}\{month_name}\{original_filename}"
+                    filepath = rf"{self.save_path}\{year}\{month_name}\{original_filename}"
+                    return self.duplicate_check(filepath)
+            
+            # Not sorting images
             else:
                 if self.date_images:
-                    return rf"{self.save_path}\date_{formatted_date}_{random_number}.jpg"
+                    file_path = rf"{self.save_path}\date_{formatted_date}.jpg"
+                    return self.duplicate_check(file_path)
                 else:
-                    return rf"{self.save_path}\{original_filename}"
+                    file_path = rf"{self.save_path}\{original_filename}"
+                    return self.duplicate_check(file_path)
         else:
-            return rf"{self.error_path}\date_not_found_{random_number}.jpg"
+            file_path = rf"{self.error_path}\date_not_found.jpg"
+            return self.duplicate_check(file_path)
+        
+    def duplicate_check(self, file_path):
+        """
+        Check if the filename already exists in the save path and adjust the name to avoid overwriting.
+        Handles filenames like 'date_02-01-2000.jpg', 'date_07-11-1997_confidence-8.jpg', and 'date_not_found.jpg'.
+        """
+        path, filename = os.path.split(file_path)
+        base_name, extension = os.path.splitext(filename)
+        
+        # Regular expression to match different parts of the file name
+        match = re.match(r"(date_)(\d{2}-\d{2}-\d{4})?(_confidence-\d+)?", base_name)
+        if match:
+            prefix = match.group(1)
+            date = match.group(2) if match.group(2) else "not_found"
+            confidence = match.group(3) if match.group(3) else ""
+            duplicate = 0
+            
+            # Construct the initial file path
+            new_filename = f"{prefix}{date}{confidence}_{str(duplicate).zfill(2)}{extension}"
+            new_file_path = os.path.join(path, new_filename)
+            
+            # Increment the duplicate counter if the file exists
+            while os.path.exists(new_file_path):
+                duplicate += 1
+                new_filename = f"{prefix}{date}{confidence}_{str(duplicate).zfill(2)}{extension}"
+                new_file_path = os.path.join(path, new_filename)
+        else:
+            # If the filename does not match the expected pattern, return the original path
+            self.log.error(f"Filename {filename} does not match the expected pattern.")
+            new_file_path = file_path
+        
+        return new_file_path
 
     def extract_year_month(self, date):
         """

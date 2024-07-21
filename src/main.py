@@ -34,7 +34,7 @@ def main():
 
 
 
-    image_organizer = ImageOrganizer(save_path=save_path, scans_path=scans_path, archive_scans=False, sort_images=False, fix_orientation=True)
+    image_organizer = ImageOrganizer(save_path=save_path, scans_path=scans_path, error_path=error_path, archive_scans=False, sort_images=False, fix_orientation=True, date_images=True)
     date_editor = ImageDateEditor(source_folder_path=save_path, image_organizer=image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
