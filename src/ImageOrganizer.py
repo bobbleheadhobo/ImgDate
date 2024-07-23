@@ -86,7 +86,7 @@ class ImageOrganizer:
                         original_exif_data = self.date_extractor.read_image_date(scan_path)
 
 
-                    if self.fix_orientation:
+                    if self.fix_orientation and confidence > 8:
                         try:
                             img = orientation.process_image(img)
                         except Exception as e:
@@ -134,7 +134,6 @@ class ImageOrganizer:
         
         return image
     
-    #*TODO save the original date and time back to the image if not dating images
     def update_metadata_and_save(self, img, date, filename, original_exif_data):
         """
         Update the image metadata with the extracted date in the format mm/dd/yyyy and save to file.
@@ -171,10 +170,10 @@ class ImageOrganizer:
             if not self.date_images and original_exif_data is not None:
                 exif_tags = {
                     'Exif.Photo.DateTimeOriginal': original_exif_data["DateTimeOriginal"],   # Date Taken
-                    'Exif.Image.DateTime': original_exif_data["DateTime"],           # Date Modified
-                    'Exif.Photo.DateTimeDigitized': original_exif_data["DateTimeDigitized"]   # Date Created
+                    'Exif.Image.DateTime': original_exif_data["DateTime"],                   # Date Modified
+                    'Exif.Photo.DateTimeDigitized': original_exif_data["DateTimeDigitized"]  # Date Created
                 }
-                img_data.modify_comment(f"{original_exif_data['comment']} \nRe-processed photo: {current_date} {current_time}")
+                
             else:
                 # Update the DateTimeOriginal (Date Taken), DateTime (Date Modified), and DateTimeDigitized (Date Created) fields
                 exif_tags = {
@@ -182,8 +181,12 @@ class ImageOrganizer:
                     'Exif.Image.DateTime': date_formatted,           # Date Modified
                     'Exif.Photo.DateTimeDigitized': date_formatted   # Date Created
                 }
-                img_data.modify_comment(f"Processed Scanned photo: {current_date} {current_time}")
-
+                
+            if original_exif_data and original_exif_data.get('comment'):
+                img_data.modify_comment(f"{original_exif_data['comment']}     Re-processed Image: {current_date} {current_time}")
+            else:
+                img_data.modify_comment(f"Processed Image: {current_date} {current_time}")
+                    
             img_data.modify_exif(exif_tags)
 
             try:
