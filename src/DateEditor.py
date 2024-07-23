@@ -1,5 +1,6 @@
 from datetime import datetime
 import re
+import time
 import tkinter as tk
 from tkinter import ttk
 import cv2
@@ -13,18 +14,19 @@ class ImageDateEditor:
     def __init__(self, source_folder_path, image_organizer):
         self.root = tk.Tk()
         self.image_organizer = image_organizer
-
+        self.source_folder_path = source_folder_path
         self.date_extractor = DateExtractor()
         self.current_image_path = None
         self.current_image = None
-        self.failed_images = self.get_failed_images(source_path=source_folder_path)
-        self.num_images = len(self.failed_images)
-        self.image_organizer.num_images = self.num_images
         self.current_index = 0
         self.log = setup_logger("DateEditor", "..\log\ImgDate.log")
 
     def setup_gui(self):
         self.log.info("Starting date editor")
+        
+        self.failed_images = self.get_failed_images(source_path=self.source_folder_path)
+        self.num_images = len(self.failed_images)
+        self.image_organizer.num_images = self.num_images
 
         self.root.title("Quick Date Editor")
         # Make the window appear on top initially
@@ -127,6 +129,8 @@ class ImageDateEditor:
             # Display the large image
             self.display_image()
         else:
+            self.update_num_image_label(f"All images processed")
+            time.sleep(1)
             self.log.info("No more images to display.")
             self.root.destroy()
 
@@ -195,7 +199,7 @@ class ImageDateEditor:
             success = self.image_organizer.save_image(self.current_image, date, 10, file_name, existing_exif_data)
             
             if success:
-                self.show_alert(f"Image updated: {date}", "green")
+                self.show_alert(f"{date}", "green")
                 # Delete the current image file after successful update
                 try:
                     os.remove(self.current_image_path)
