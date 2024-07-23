@@ -98,7 +98,7 @@ class DateExtractor:
         """
         Validate the extracted text to see if it matches the date format mm dd 'yy.
         """
-        self.log.info(f"Extracted date: {text}")
+        # self.log.info(f"Extracted date: {text}")
         # Define the regex pattern for the date format mm dd 'yy
         pattern = r'(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ]\'*(\d{2,4})'
         
@@ -128,7 +128,7 @@ class DateExtractor:
             return date, True
         else:
             self.log.error("No valid date found in image.")
-            # check if the text contains "unknown"
+            
             if "not found" in text.lower():
                 return None, False
             

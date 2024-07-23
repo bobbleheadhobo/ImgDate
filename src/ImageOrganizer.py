@@ -43,7 +43,13 @@ class ImageOrganizer:
 
     def process_images(self):
         scan_file_paths = self.get_scan_file_paths()
-        self.log.info(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
+        if self.crop_images:
+            self.log.info(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
+        else:
+            self.log.info(f"Found {len(scan_file_paths)} {'image' if len(scan_file_paths) == 1 else 'images'} to process.")
+            self.num_images = len(scan_file_paths)
+            
+            
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
@@ -243,6 +249,7 @@ class ImageOrganizer:
             formatted_date = date.replace('/', '-')
             if confidence < 9:
                 file_path = rf"{self.error_path}\date_{formatted_date}_confidence-{confidence}.jpg"
+                self.log.warning(f"Low confidence ({confidence}) for date {date}. Saving to failed location")
                 return self.duplicate_check(file_path)
             
             if self.sort_images:
