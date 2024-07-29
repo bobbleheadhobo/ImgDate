@@ -1,0 +1,7 @@
+numpy
+opencv-python
+dlib
+Pillow
+pyexiv2
+python-dotenv
+requests
