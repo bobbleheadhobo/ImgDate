@@ -246,7 +246,6 @@ class ImageOrganizer:
         """
         Generate a filename based on the date and confidence.
         """
-        random_number = random.randint(1000, 9999)
 
         if date is not None:
             formatted_date = date.replace('/', '-')
@@ -277,7 +276,7 @@ class ImageOrganizer:
             file_path = rf"{self.error_path}\date_not_found.jpg"
             return self.duplicate_check(file_path)
         
-    def duplicate_check(self, file_path):
+    def  duplicate_check(self, file_path):
         """
         Check if the filename already exists in the save path and adjust the name to avoid overwriting.
         Handles filenames like 'date_02-01-2000.jpg', 'date_07-11-1997_confidence-8.jpg', and 'date_not_found.jpg'.

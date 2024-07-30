@@ -15,12 +15,11 @@ def main():
     log = setup_logger("Main", "..\log\ImgDate.log")
 
 
-    scans_path = r"..\debug"
-    save_path = r"..\debug\processed"
+    scans_path = r"..\img\test\multi_date_formats"
+    save_path = r"..\img\test\multi_date_formats\processed"
     error_path = rf"{save_path}\Failed"
     archive_path = rf"{save_path}\Archive"
 
-    start_time = time.time()
 
     # mainly used for debugging
     if args.delete:
@@ -34,8 +33,17 @@ def main():
         os.makedirs(save_path, exist_ok=True)
 
 
+    start_time = time.time()
 
-    image_organizer = ImageOrganizer(save_path=save_path, scans_path=scans_path, error_path=error_path, archive_scans=False, sort_images=False, fix_orientation=True, crop_images=False, date_images=True)
+    image_organizer = ImageOrganizer(save_path=save_path,
+                                     scans_path=scans_path,
+                                     error_path=error_path,
+                                     archive_scans=False,
+                                     sort_images=False,
+                                     fix_orientation=True,
+                                     crop_images=True,
+                                     date_images=False)
+    
     date_editor = ImageDateEditor(source_folder_path=error_path, image_organizer=image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")

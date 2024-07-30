@@ -195,7 +195,7 @@ class ImageDateEditor:
 
             # Attempt to save the image with the updated metadata
             existing_exif_data = None
-            file_name = self.generate_filename(date, 10)
+            file_name = self.generate_filename(date)
             success = self.image_organizer.save_image(self.current_image, date, 10, file_name, existing_exif_data)
             
             if success:
@@ -248,15 +248,19 @@ class ImageDateEditor:
         self.log.error(f"Invalid date: {date}")
         return None  # Explicitly return None for invalid dates
 
-    def generate_filename(self, date, confidence):
+    def generate_filename(self, date,):
         if date is None:  # Check specifically for None
             self.log.error("Invalid date provided for filename generation.")
             raise ValueError("Invalid date provided for filename generation.")
 
         # Continue with filename generation if date is valid
         formatted_date = date.replace('/', '-')
-        filename = f"{formatted_date}_confidence{confidence}.jpg"
-        return filename
+        filename = f"date_{formatted_date}.jpg"
+        filepath = os.path.join(self.image_organizer.save_path, filename)
+        filepath = self.image_organizer.duplicate_check(filepath)
+        return os.path.basename(filepath)
+        
+        
 
     def cv2_to_tk(self, cv_image):
         # Convert the OpenCV image (BGR) to a format compatible with Tkinter (RGB)
