@@ -141,7 +141,7 @@ class ImageOrganizer:
         # Convert the numpy array (OpenCV format) to a PIL Image
         pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
-        # Save PIL image to disk temporarily
+        # Save PIL image with temp filename
         temp_filename = 'temp_image.jpg'
         pil_img.save(temp_filename, format="JPEG")
 
@@ -283,6 +283,7 @@ class ImageOrganizer:
         """
         path, filename = os.path.split(file_path)
         base_name, extension = os.path.splitext(filename)
+        duplicate = 0
         
         # Regular expression to match different parts of the file name
         match = re.match(r"(date_)(\d{2}-\d{2}-\d{4})?(_confidence-\d+)?", base_name)
@@ -290,7 +291,6 @@ class ImageOrganizer:
             prefix = match.group(1)
             date = match.group(2) if match.group(2) else "not_found"
             confidence = match.group(3) if match.group(3) else ""
-            duplicate = 0
             
             # Construct the initial file path
             new_filename = f"{prefix}{date}{confidence}_{str(duplicate).zfill(2)}{extension}"
@@ -303,9 +303,16 @@ class ImageOrganizer:
                 new_file_path = os.path.join(path, new_filename)
         else:
             # If the filename does not match the expected pattern, return the original path
-            self.log.error(f"Filename {filename} does not match the expected pattern.")
-            new_file_path = file_path
-        
+            # self.log.error(f"Filename {filename} does not match the expected pattern.")
+            new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
+            new_file_path = os.path.join(path, new_filename)
+            
+            while os.path.exists(new_file_path):
+                duplicate += 1
+                new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
+                new_file_path = os.path.join(path, new_filename)
+                
+                
         return new_file_path
 
     def extract_year_month(self, date):

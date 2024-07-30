@@ -44,7 +44,7 @@ def main():
                                      crop_images=True,
                                      date_images=False)
     
-    date_editor = ImageDateEditor(source_folder_path=error_path, image_organizer=image_organizer)
+    date_editor = ImageDateEditor(source_folder_path=save_path, image_organizer=image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
 
