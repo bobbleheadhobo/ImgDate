@@ -43,7 +43,7 @@ class ImageDateEditor:
         self.num_images_label.pack(side=tk.TOP, fill=tk.X, padx=1, pady=1)
 
         # Canvas for displaying the large image
-        self.canvas = tk.Canvas(self.main_frame, bg="gray")
+        self.canvas = tk.Canvas(self.main_frame, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
         self.canvas.bind("<Configure>", self.on_resize)
 
