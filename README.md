@@ -1,4 +1,4 @@
-# ImgDate: Automated Photo Digitization and Organization
+# ImgDate: Automated Photo Digitization
 
 ## Description
 
@@ -15,7 +15,7 @@ ImgDate is a powerful Python-based tool designed to streamline the process of di
 - **Metadata Management**: Updates EXIF data with extracted dates on the images.
 <br>
 
-- **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition. <u>Note: This feature requires successful installation of dlib and its dependencies</u>
+- **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition. !Note: This feature requires successful installation of dlib and its dependencies<
 <br>
 
 - **Date Editor**: Easily update the EXIF data of photos manually for the ones that the script failed to process.
@@ -32,13 +32,17 @@ ImgDate is a powerful Python-based tool designed to streamline the process of di
 ## Installation
 1. Clone the repository:
 git clone https://github.com/bobbleheadhobo/ImgDate.git
+<br>
 cd ImgDate
 
 2. Install required dependencies:
+<br>
 pip install -r requirements.txt
 
 3. Set up your OpenAI API key:
+<br>
 - Create a `.env` file in the project root
+<br>
 - Add your OpenAI API key: `OPENAI_API_KEY=your_api_key_here`
 
 ## Configuration
@@ -65,15 +69,18 @@ image_organizer = ImageOrganizer(
 1. Place your scans images in the `img/unprocessed` folder or any folder of your choice.
 
 2. Run the main script:
-    `python main.py organize` this will crop, date and organize your images
-    `python main.py edit` this will open the date editor allowing you to quickly update the date of your images
-    `python main.py process` this will crop, date and organize your photos then open the date editor to fix the images that failed
+<br>
+    `python main.py organize` Crops, dates and organizes your images.
+<br>
+    `python main.py edit` Opens the date editor allowing you to quickly update the date of your images.
+<br>
+    `python main.py process` Crop, date and organize your photos then open the date editor to fix the images that failed.
 
 3. Processed images will be saved in the `img/processed` folder or the folder of your choice
 
 
 
-Note: when scanning images the dates of the images must be in the <span style="color:red">top right for landscape position</span> and <span style="color:red">top left for portrait position</span>. Otherwise the script will look for the date in the wrong part of the image.
+Note: when scanning images the dates of the images must be in the -top right for landscape position- and -top left for portrait position-. Otherwise the script will look for the date in the wrong part of the image.
 
 ## Contributing
 Contributions to ImgDate are welcome! Please feel free to submit a Pull Request.
