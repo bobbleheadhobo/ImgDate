@@ -79,9 +79,9 @@ image_organizer = ImageOrganizer(
 
 3. Processed images will be saved in the `img/processed` folder or the folder of your choice
 
-
-[!IMPORTANT]
- When scanning images the dates of the images must be in the top right for landscape position and top left for portrait position. Otherwise the script will look for the date in the wrong part of the image.
+<be>
+> [!IMPORTANT]
+> When scanning images the dates of the images must be in the top right for landscape position and top left for portrait position. Otherwise the script will look for the date in the wrong part of the image.
 
 ## Contributing
-Contributions to ImgDate are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request.
