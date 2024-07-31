@@ -15,10 +15,6 @@ def main():
     log = setup_logger("Main", "..\log\ImgDate.log")
 
 
-    scans_path = r"..\img\test\multi_date_formats"
-    save_path = r"..\img\test\multi_date_formats\processed"
-    error_path = rf"{save_path}\Failed"
-    archive_path = rf"{save_path}\Archive"
 
 
     # mainly used for debugging
@@ -34,6 +30,11 @@ def main():
 
 
     start_time = time.time()
+    
+    scans_path = r"..\img\test\multi_date_formats"
+    save_path = r"..\img\test\multi_date_formats\processed"
+    error_path = rf"{save_path}\Failed"
+    archive_path = rf"{save_path}\Archive"
 
     image_organizer = ImageOrganizer(save_path=save_path,
                                      scans_path=scans_path,
@@ -44,7 +45,7 @@ def main():
                                      crop_images=True,
                                      date_images=False)
     
-    date_editor = ImageDateEditor(source_folder_path=save_path, image_organizer=image_organizer)
+    date_editor = ImageDateEditor(source_folder_path=error_path, image_organizer=image_organizer)
 
     log.info(f"\n\n------------------------------\nStarting operation: {args.operation}\n------------------------------\n")
 
