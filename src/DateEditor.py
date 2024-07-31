@@ -19,6 +19,8 @@ class ImageDateEditor:
         self.current_image_path = None
         self.current_image = None
         self.current_index = 0
+        self.magnifier_size = 200  # Size of the magnifier
+        self.zoom_factor = 3  # How much to zoom in
         self.log = setup_logger("DateEditor", "..\log\ImgDate.log")
 
     def setup_gui(self):
@@ -54,37 +56,66 @@ class ImageDateEditor:
         self.date_entry.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
         self.date_entry.focus_set()  # Automatically focus on the entry widget
 
-        # Create a frame to hold the date label and the checkbox
+        # Create a frame to hold the date label
         self.date_frame = ttk.Frame(self.main_frame)
         self.date_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
         # Label to show the current image date
         self.date_label = tk.Label(self.date_frame, bg="lightgrey", font=("Arial", 10))
         self.date_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=1, pady=1)
-
-        # Create a BooleanVar to store the state of the checkbox
-        self.magnify_date = tk.BooleanVar(value=True)
-
-        # Create the Checkbutton widget
-        self.checkbox = tk.Checkbutton(self.date_frame, text="Magnify Date", variable=self.magnify_date, command=self.magnify_date_checkbox_toggled)
-        self.checkbox.pack(side=tk.RIGHT)
         
 
         # Bind Enter key to save the date
         self.date_entry.bind("<Return>", lambda event: self.save_date())
-
+        
+        # Add mouse bindings for magnifier
+        self.canvas.bind("<Motion>", self.update_magnifier)
+        self.canvas.bind("<Leave>", self.hide_magnifier)
+        
         # Load the first image
         self.load_next_image()
 
+    def update_magnifier(self, event):
+        if not hasattr(self, 'resized_image'):
+            return
 
-    
-    def magnify_date_checkbox_toggled(self):
-        if self.magnify_date.get():
-            canvas_width = self.canvas.winfo_width()
-            canvas_height = self.canvas.winfo_height()
-            self.display_small_image(canvas_width, canvas_height)
-        else:
-            self.canvas.delete("small_image")
+        # Get the position relative to the image
+        x = event.x - self.image_x
+        y = event.y - self.image_y
+
+        # Check if the cursor is over the image
+        if 0 <= x < self.resized_image.shape[1] and 0 <= y < self.resized_image.shape[0]:
+            # Calculate the region to magnify
+            left = max(0, x - self.magnifier_size // (2 * self.zoom_factor))
+            top = max(0, y - self.magnifier_size // (2 * self.zoom_factor))
+            right = min(self.resized_image.shape[1], x + self.magnifier_size // (2 * self.zoom_factor))
+            bottom = min(self.resized_image.shape[0], y + self.magnifier_size // (2 * self.zoom_factor))
+
+            # Extract the region
+            magnified_region = self.resized_image[top:bottom, left:right]
+
+            # Resize the region
+            magnified = cv2.resize(magnified_region, (self.magnifier_size, self.magnifier_size), interpolation=cv2.INTER_LINEAR)
+
+            # Convert to PhotoImage
+            self.magnified_photo = self.cv2_to_tk(magnified)
+
+            # Position the magnified image near the cursor
+            mag_x = event.x + 20
+            mag_y = event.y + 20
+
+            # Ensure the magnified image stays within the canvas
+            if mag_x + self.magnifier_size > self.canvas.winfo_width():
+                mag_x = event.x - self.magnifier_size - 20
+            if mag_y + self.magnifier_size > self.canvas.winfo_height():
+                mag_y = event.y - self.magnifier_size - 20
+
+            # Display the magnified image
+            self.canvas.delete("magnifier")
+            self.canvas.create_image(mag_x, mag_y, anchor=tk.NW, image=self.magnified_photo, tags="magnifier")
+
+    def hide_magnifier(self, event):
+        self.canvas.delete("magnifier")
 
     def update_date_label(self, text):
         self.date_label.config(text=text)
@@ -138,37 +169,37 @@ class ImageDateEditor:
         if self.current_image is None:
             return
 
-        # Resize the image to fit the canvas
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
 
         if canvas_width > 1 and canvas_height > 1:
-            resized_image = cv2.resize(self.current_image, (canvas_width, canvas_height), interpolation=cv2.INTER_LANCZOS4)
-            self.photo_image = self.cv2_to_tk(resized_image)
+            # Get original image dimensions
+            img_height, img_width = self.current_image.shape[:2]
+            
+            # Calculate aspect ratios
+            img_aspect = img_width / img_height
+            canvas_aspect = canvas_width / canvas_height
+            
+            if img_aspect > canvas_aspect:
+                # Image is wider than canvas
+                new_width = canvas_width
+                new_height = int(canvas_width / img_aspect)
+            else:
+                # Image is taller than canvas
+                new_height = canvas_height
+                new_width = int(canvas_height * img_aspect)
+            
+            self.resized_image = cv2.resize(self.current_image, (new_width, new_height), interpolation=cv2.INTER_LANCZOS4)
+            self.photo_image = self.cv2_to_tk(self.resized_image)
 
-            # Update the canvas with the new image
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.photo_image)
+            # Calculate position to center the image
+            self.image_x = (canvas_width - new_width) // 2
+            self.image_y = (canvas_height - new_height) // 2
 
-            if self.magnify_date.get():
-                # Display the small image in the bottom right corner
-                self.display_small_image(canvas_width, canvas_height)
+            # Clear previous image and create new one
+            self.canvas.delete("all")
+            self.canvas.create_image(self.image_x, self.image_y, anchor=tk.NW, image=self.photo_image)
 
-    def display_small_image(self, canvas_width, canvas_height):
-        if self.current_image is None:
-            return
-
-        # Extract and resize the small image
-        small_image = self.date_extractor.crop_date_64(self.current_image, False)
-        if small_image is not None:
-            small_image_resized = cv2.resize(small_image, (int(canvas_width * 0.4), int(canvas_height * 0.4)), interpolation=cv2.INTER_LANCZOS4)
-            self.small_photo_image = self.cv2_to_tk(small_image_resized)
-
-            # Calculate the position for the small image
-            x = canvas_width - int(canvas_width * 0.4)  
-            y = canvas_height - int(canvas_height * 0.4) 
-
-            # Overlay the small image on the canvas
-            self.canvas.create_image(x, y, anchor=tk.NW, image=self.small_photo_image, tags="small_image")
 
     def on_resize(self, event):
         self.display_image()
