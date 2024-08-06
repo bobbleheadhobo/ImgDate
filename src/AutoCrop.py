@@ -4,8 +4,10 @@ import os
 from LoggerConfig import setup_logger
 
 class AutoCrop:
-    def __init__(self):
+    def __init__(self, save_path, draw_contours):
         self.current_image = 0
+        self.draw_contours = draw_contours
+        self.save_path = save_path
         self.log = setup_logger("AutoCrop", "..\log\ImgDate.log")
 
     def crop_and_straighten(self, image):
@@ -32,10 +34,12 @@ class AutoCrop:
             if area < 1000000 or area > 9000000:
                 continue
 
-            # debug Draw the rotated rectangle for preview
-            # box = cv2.boxPoints(rect)
-            # box = np.intp(box)
-            # cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 10)
+            if self.draw_contours:
+                # debug Draw the rotated rectangle for preview
+                box = cv2.boxPoints(rect)
+                box = np.intp(box)
+                cv2.drawContours(preview_image, [box], 0, (0, 255, 0), 35)
+                
 
             # Extract and process the rotated rectangle
             cropped = self.crop_rotated_rectangle(image, rect)
@@ -45,8 +49,10 @@ class AutoCrop:
                 cropped_images.append(cropped)
                 self.current_image += 1
 
-        # Save the preview for debugging
-        # cv2.imwrite(f"../img/processed/contours_{self.current_image}.jpg", preview_image)
+        if self.draw_contours:
+            contour_path = os.path.join(self.save_path, "contours")
+            os.makedirs(contour_path, exist_ok=True)
+            cv2.imwrite(f"{contour_path}/contours_{self.current_image}.jpg", preview_image)
 
         self.log.info(f"Detected {len(cropped_images)} images.")
         return cropped_images

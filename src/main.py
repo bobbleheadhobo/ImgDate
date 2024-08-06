@@ -10,6 +10,8 @@ def main():
     parser = argparse.ArgumentParser(description="Process images or start the editor.")
     parser.add_argument("operation", choices=["organize", "process", "edit"], help="Operation to perform")
     parser.add_argument("-d", "--delete", action="store_true", help="(Debug) Delete files in save path before operation")
+    parser.add_argument("-c", "--contours", action="store_true", help="(Debug) Show contours to highlight detected images")
+    
 
     args = parser.parse_args()
     log = setup_logger("Main", "..\log\ImgDate.log")
@@ -31,19 +33,22 @@ def main():
 
     start_time = time.time()
     
-    scans_path = r"..\img\test\multi_date_formats"
-    save_path = r"..\img\test\multi_date_formats\processed"
+    base_path = r"C:\Users\super\OneDrive\Desktop\scans\Instax"
+    scans_path = rf"{base_path}\more"
+    save_path = rf"{base_path}\more\processed"
     error_path = rf"{save_path}\Failed"
-    archive_path = rf"{save_path}\Archive"
+    archive_path = rf"{scans_path}\Archive"
 
     image_organizer = ImageOrganizer(save_path=save_path,
                                      scans_path=scans_path,
                                      error_path=error_path,
-                                     archive_scans=False,
+                                     archive_path=archive_path,
+                                     archive_scans=True,
                                      sort_images=False,
                                      fix_orientation=True,
                                      crop_images=True,
-                                     date_images=False)
+                                     date_images=False,
+                                     draw_contours=args.contours)
     
     date_editor = ImageDateEditor(source_folder_path=error_path, image_organizer=image_organizer)
 

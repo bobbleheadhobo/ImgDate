@@ -16,7 +16,7 @@ from FixOrientation import FixOrientation
 from LoggerConfig import setup_logger
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\processed\archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True):
+    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -28,7 +28,7 @@ class ImageOrganizer:
         self.sort_images = sort_images
         self.num_images = 0
         self.current_image_num = 0
-        self.auto_crop = AutoCrop()
+        self.auto_crop = AutoCrop(save_path, draw_contours)
         self.date_extractor = DateExtractor()
 
         # if self.fix_orientation:
@@ -203,7 +203,10 @@ class ImageOrganizer:
                 self.log.error(f"Error reading updated date from exif data: {e}")
                 updated_date = "Unknown"
 
-            self.log.info(f"Updated exif date to {updated_date}")
+            if self.date_images:
+                self.log.info(f"Updated exif date to {updated_date}")
+            else:
+                self.log.info(f"Kept original exif data")
         finally:
             img_data.close()
 
@@ -302,11 +305,18 @@ class ImageOrganizer:
                 new_filename = f"{prefix}{date}{confidence}_{str(duplicate).zfill(2)}{extension}"
                 new_file_path = os.path.join(path, new_filename)
         else:
-            # If the filename does not match the expected pattern, return the original path
-            # self.log.error(f"Filename {filename} does not match the expected pattern.")
-            new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
-            new_file_path = os.path.join(path, new_filename)
+            match = re.match(r"(.+)(_\d{2})", base_name)
+            # If the filename does not match the expected pattern add duplicate counter
+            if match:
+                base_name = match.group(1)
+                duplicate = int(match.group(2)[1:])
+                new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
+                new_file_path = os.path.join(path, new_filename)
             
+            else:
+                new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
+                new_file_path = os.path.join(path, new_filename)
+                
             while os.path.exists(new_file_path):
                 duplicate += 1
                 new_filename = f"{base_name}_{str(duplicate).zfill(2)}{extension}"
@@ -327,33 +337,6 @@ class ImageOrganizer:
         year_folder = os.path.join(self.save_path, year)
         month_folder = os.path.join(year_folder, month_name)
         os.makedirs(month_folder, exist_ok=True)
-
-    def save_file(self, img, filename):
-        """
-        Save the image file to the specified filename.
-        """
-        # Check if img is a byte string and decode it to a numpy array if needed
-        if isinstance(img, bytes):
-            img_array = np.frombuffer(img, dtype=np.uint8)
-            img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-
-        # Ensure the image is C-contiguous
-        if isinstance(img, np.ndarray):
-            img = np.ascontiguousarray(img)
-        
-        # Encode the image as JPEG before saving
-        success, encoded_img = cv2.imencode('.jpg', img)
-        if not success:
-            self.log.error(f"Failed to encode image")
-            return
-
-        with open(filename, 'wb') as f:
-            f.write(encoded_img.tobytes())
-        
-        if os.path.exists(filename):
-            self.log.info(f"Saved image to {filename}")
-        else:
-            self.log.error(f"Error saving image to {filename}")
 
 
 
