@@ -67,6 +67,11 @@ class ImageDateEditor:
 
         # Bind Enter key to save the date
         self.date_entry.bind("<Return>", lambda event: self.save_date())
+        self.root.bind("<Shift_R>", lambda event: self.move_without_date_change())
+        self.root.bind("<Shift_L>", lambda event: self.move_without_date_change())
+        
+        
+        
         
         # Add mouse bindings for magnifier
         self.canvas.bind("<Motion>", self.update_magnifier)
@@ -203,6 +208,31 @@ class ImageDateEditor:
 
     def on_resize(self, event):
         self.display_image()
+        
+    def move_without_date_change(self):
+        if self.current_image_path:
+            # Get the original filename
+            original_filename = os.path.basename(self.current_image_path)
+            
+            # Create the destination path
+            destination_path = os.path.join(self.image_organizer.save_path, original_filename)
+            
+            # Check for duplicates and modify filename if necessary
+            destination_path = self.image_organizer.duplicate_check(destination_path)
+            
+            try:
+                os.rename(self.current_image_path, destination_path)
+                self.log.info(f"Moved image without date change: {self.current_image_path} -> {destination_path}")
+                self.show_alert("Saved without date change", "dark green")
+            except OSError as e:
+                self.log.error(f"Error moving file {self.current_image_path}: {e}")
+                self.show_alert("Failed to save image", "red")
+            
+            # Load the next image
+            self.load_next_image()
+        else:
+            self.log.info("No image loaded")
+            self.show_alert("No image loaded", "red")
 
     def save_date(self):
         """
