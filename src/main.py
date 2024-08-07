@@ -33,9 +33,9 @@ def main():
 
     start_time = time.time()
     
-    base_path = r"C:\Users\super\OneDrive\Desktop\scans\Instax"
-    scans_path = rf"{base_path}\more"
-    save_path = rf"{base_path}\more\processed"
+    base_path = r"C:\Users\super\OneDrive\Desktop\scans\developed 4-29-2005"
+    scans_path = rf"{base_path}"
+    save_path = rf"{base_path}\processed"
     error_path = rf"{save_path}\Failed"
     archive_path = rf"{scans_path}\Archive"
 

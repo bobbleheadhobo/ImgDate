@@ -28,7 +28,7 @@ class ImageOrganizer:
         self.sort_images = sort_images
         self.num_images = 0
         self.current_image_num = 0
-        self.auto_crop = AutoCrop(save_path, draw_contours)
+        self.auto_crop = AutoCrop(scans_path, draw_contours)
         self.date_extractor = DateExtractor()
 
         # if self.fix_orientation:
