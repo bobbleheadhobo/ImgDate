@@ -110,6 +110,21 @@ class AutoCrop:
         if border_size >= min(height // 2, width // 2):
             border_size = min(height // 2, width // 2) - 1
         return image[border_size:height-border_size, border_size:width-border_size]
+    
+    def make_landscape(self, image):
+        """
+        Rotates an image to landscape orientation if it is in portrait orientation.
+        
+        :param image: Image as a NumPy array.
+        :return: Rotated image in landscape orientation.
+        """
+        height, width = image.shape[:2]
+        
+        if height > width:
+            # Rotate the image by 90 degrees
+            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+    
+        return image    
 
 if __name__ == "__main__":
     image_path = r"C:\Users\super\OneDrive\Documents\Code\img_date\img\unprocessed\00000001_4.jpg"
