@@ -67,9 +67,12 @@ class ImageOrganizer:
         original_filename = os.path.basename(scan_path)  # Get the original filename
         try:
             if self.crop_images:
+                # crop scan into a list of images
                 self.log.info(f"Cropping: {scan_path}")
                 cropped_images = self.crop_single_scan(scan)
             else:
+                # each scan here is an individual image
+                scan = self.auto_crop.make_landscape(scan)
                 cropped_images = [scan]
 
             if cropped_images:
