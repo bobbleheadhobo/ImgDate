@@ -31,9 +31,6 @@ class ImageOrganizer:
         self.auto_crop = AutoCrop(scans_path, draw_contours)
         self.date_extractor = DateExtractor()
 
-        # if self.fix_orientation:
-        #     self.orientation = FixOrientation()
-
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
 
@@ -118,8 +115,9 @@ class ImageOrganizer:
 
     def get_scan_file_paths(self):
         image_files = []
+        image_extensions = ('.jpg', '.jpeg', '.png', '.tiff', '.JPG')
         for file in os.listdir(self.scans_path):
-            if file.endswith(".jpg"):
+            if file.endswith(image_extensions):
                 image_files.append(os.path.join(self.scans_path, file))
         return image_files
 
@@ -146,7 +144,7 @@ class ImageOrganizer:
 
         # Save PIL image with temp filename
         temp_filename = 'temp_image.jpg'
-        pil_img.save(temp_filename, format="JPEG")
+        pil_img.save(temp_filename, format="JPEG", quality=95)
 
         img_data = None
         try:
