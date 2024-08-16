@@ -5,3 +5,4 @@ Pillow
 pyexiv2
 python-dotenv
 requests
+watchdog
