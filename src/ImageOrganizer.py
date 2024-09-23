@@ -2,9 +2,7 @@ import datetime
 import os
 import re
 import shutil
-import numpy as np
 import cv2
-import random
 import calendar
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image

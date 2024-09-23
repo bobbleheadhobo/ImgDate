@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Organizer</title>
+    <style>
+        .disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Organizer</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="files[]" multiple accept="image/*" required>
+        <br><br>
+        <label><input type="checkbox" name="fix_orientation" value="true" checked title="Automatically detects and corrects the orientation of photos using facial recognition."> Fix orientation</label><br>
+        <label><input type="checkbox" name="date_images" value="true" checked title="Extract and sets dates from scanned photos."> Date images</label><br>
+        <label><input type="checkbox" name="crop_images" value="true" id="cropImages" title="Crops images from scans"> Crop images</label><br>
+        <label><input type="checkbox" name="sort_images" value="true" title="Sorts processed images into folders by year and month."> Sort images</label><br>
+        <label id="drawContoursLabel"><input type="checkbox" name="draw_contours" value="true" id="drawContours" title="Shows which images were cropped from scans"> Draw contours</label><br>
+        <br>
+        <label>File name prefix (optional): <input type="text" name="file_prefix"></label><br>
+        <br>
+        <button type="submit">Upload and Process</button>
+    </form>
+    <div id="message"></div>
+    <div id="countInfo"></div>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            document.getElementById('message').innerText = 'Processing images...';
+            document.getElementById('countInfo').innerText = '';
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('message').innerText = 'Error: ' + data.error;
+                } else {
+                    document.getElementById('message').innerHTML = data.message + ' <a href="' + data.download_url + '">Download processed images</a>';
+                    document.getElementById('countInfo').innerText = `Uploaded: ${data.uploaded_count}, Processed: ${data.processed_count}`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('message').innerText = 'Error: ' + error.message;
+                console.error('Error:', error);
+            });
+        });
+
+        // Handle the dependency between "Crop images" and "Draw contours" checkboxes
+        document.getElementById('cropImages').addEventListener('change', function() {
+            var drawContoursLabel = document.getElementById('drawContoursLabel');
+            var drawContours = document.getElementById('drawContours');
+            if (this.checked) {
+                drawContoursLabel.classList.remove('disabled');
+                drawContours.disabled = false;
+            } else {
+                drawContoursLabel.classList.add('disabled');
+                drawContours.disabled = true;
+                drawContours.checked = false;
+            }
+        });
+
+        // Initial state setup
+        document.getElementById('cropImages').dispatchEvent(new Event('change'));
+    </script>
+</body>
+</html>

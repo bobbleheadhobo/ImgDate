@@ -33,7 +33,7 @@ def main():
 
     start_time = time.time()
     
-    base_path = r"C:\Users\super\OneDrive\Desktop\scans\developed 4-29-2005"
+    base_path = r"C:\Users\super\OneDrive\Desktop\scans\not dated\processed\temp\temp"
     scans_path = rf"{base_path}"
     save_path = rf"{base_path}\processed"
     error_path = rf"{save_path}\Failed"
@@ -46,8 +46,8 @@ def main():
                                      archive_scans=True,
                                      sort_images=False,
                                      fix_orientation=True,
-                                     crop_images=True,
-                                     date_images=False,
+                                     crop_images=False,
+                                     date_images=True,
                                      draw_contours=args.contours)
     
     date_editor = ImageDateEditor(source_folder_path=error_path, image_organizer=image_organizer)
@@ -58,6 +58,7 @@ def main():
     if args.operation == "organize":
         image_organizer.process_images()
     elif args.operation == "edit":
+        date_editor.source_folder_path=base_path
         date_editor.start()
     elif args.operation == "process":
         image_organizer.process_images()
