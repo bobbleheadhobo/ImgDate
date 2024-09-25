@@ -11,8 +11,8 @@ import time
 app = Flask(__name__)
 
 # Configuration
-UPLOAD_FOLDER = 'uploads'
-PROCESSED_FOLDER = 'processed'
+UPLOAD_FOLDER = '../img/web/uploads'
+PROCESSED_FOLDER = '../img/web/processed'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -42,6 +42,13 @@ def delayed_file_deletion(file_path, delay=10):
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
+
+@app.route('/api/progress', methods=['GET'])
+def get_progress():
+    return jsonify({
+        'current_image_num': image_organizer.current_image_num,
+        'num_images': image_organizer.num_images
+    })
 
 @app.route('/upload', methods=['POST'])
 def upload_and_process():
@@ -142,4 +149,4 @@ def download(batch_id):
         delayed_file_deletion(zip_path)
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=8888)
