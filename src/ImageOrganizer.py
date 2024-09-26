@@ -12,6 +12,7 @@ from AutoCrop import AutoCrop
 from DateExtractor import DateExtractor
 from FixOrientation import FixOrientation
 from LoggerConfig import setup_logger
+import SharedVariables as shared
 
 class ImageOrganizer:
     def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False):
@@ -24,10 +25,12 @@ class ImageOrganizer:
         self.date_images = date_images
         self.fix_orientation = fix_orientation
         self.sort_images = sort_images
-        self.num_images = 0
-        self.current_image_num = 0
         self.auto_crop = AutoCrop(scans_path, draw_contours)
         self.date_extractor = DateExtractor()
+
+        self.s = shared
+        self.s.num_images = 0
+        self.s.current_image_num = 0
 
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
@@ -42,7 +45,7 @@ class ImageOrganizer:
             self.log.info(f"Found {len(scan_file_paths)} {'scan' if len(scan_file_paths) == 1 else 'scans'} to process.")
         else:
             self.log.info(f"Found {len(scan_file_paths)} {'image' if len(scan_file_paths) == 1 else 'images'} to process.")
-            self.num_images = len(scan_file_paths)
+            self.s.num_images = len(scan_file_paths)
             
             
 
@@ -122,7 +125,7 @@ class ImageOrganizer:
     def crop_single_scan(self, scan):
         cropped_images = self.auto_crop.crop_and_straighten(scan)
         with self.lock:
-            self.num_images += len(cropped_images)
+            self.s.num_images += len(cropped_images)
         return cropped_images
     
     def load_scan(self, scan_path):
@@ -239,8 +242,8 @@ class ImageOrganizer:
             else:
                 self.log.error(f"Failed to update metadata or save image: {filename}")
 
-            self.current_image_num += 1
-            self.log.info(f"Image {self.current_image_num} of {self.num_images} processed\n")
+            self.s.current_image_num += 1
+            self.log.info(f"Image {self.s.current_image_num} of {self.s.num_images} processed\n")
             return success
 
 

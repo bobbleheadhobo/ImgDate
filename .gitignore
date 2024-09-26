@@ -1,7 +1,7 @@
 #project specific
 *.jpg
 *.png
-
+*.zip
 
 
 # Byte-compiled / optimized / DLL files

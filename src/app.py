@@ -7,6 +7,7 @@ import zipfile
 import uuid
 import threading
 import time
+import SharedVariables as s
 
 app = Flask(__name__)
 
@@ -45,10 +46,13 @@ def index():
 
 @app.route('/api/progress', methods=['GET'])
 def get_progress():
-    return jsonify({
-        'current_image_num': image_organizer.current_image_num,
-        'num_images': image_organizer.num_images
-    })
+    if hasattr(s, 'num_images') and hasattr(s, 'current_image_num'):
+        return jsonify({
+            'num_images': s.num_images,
+            'current_image_num': s.current_image_num
+        }), 200
+    else:
+        return jsonify({'error': 'Progress not available'}), 404
 
 @app.route('/upload', methods=['POST'])
 def upload_and_process():
@@ -62,6 +66,9 @@ def upload_and_process():
 
     # Create a unique identifier for this batch
     batch_id = str(uuid.uuid4())
+    
+    # Reset shared variables
+    s.reset()
     
     # Create a temporary directory for this upload
     with tempfile.TemporaryDirectory() as tmpdirname:

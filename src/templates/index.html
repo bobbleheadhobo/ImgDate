@@ -1,61 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Organizer</title>
+    <title>Img Date</title>
     <style>
+        /* General reset for modern look */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        label {
+            font-size: 1.1em;
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        input[type="checkbox"],
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        input[type="file"],
+        input[type="text"] {
+            font-size: 1em;
+            background-color: #f9f9f9;
+            outline: none;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #progressContainer {
+            margin: 20px 0;
+        }
+
+        #progressBar {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+
+        #progressBarFill {
+            width: 0;
+            height: 25px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            border-radius: 5px;
+            transition: width 0.4s ease;
+        }
+
+        #progressText {
+            font-size: 1.1em;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        #startOver {
+            background-color: #ff4136;
+            color: #fff;
+            border: none;
+            font-size: 0.9em;
+            cursor: pointer;
+            width: 100%;
+            padding: 5px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+
         .disabled {
-            opacity: 0.5;
-            pointer-events: none;
+            opacity: 0.6;
+            pointer-events: not-allowed;
+        }
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            form {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
         }
     </style>
 </head>
+
 <body>
-    <h1>Image Organizer</h1>
+    <h1>Img Date</h1>
     <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" name="files[]" multiple accept="image/*" required>
-        <br><br>
-        <label><input type="checkbox" name="fix_orientation" value="true" checked title="Automatically detects and corrects the orientation of photos using facial recognition."> Fix orientation</label><br>
-        <label><input type="checkbox" name="date_images" value="true" checked title="Extract and sets dates from scanned photos."> Date images</label><br>
-        <label><input type="checkbox" name="crop_images" value="true" id="cropImages" title="Crops images from scans"> Crop images</label><br>
-        <label><input type="checkbox" name="sort_images" value="true" title="Sorts processed images into folders by year and month."> Sort images</label><br>
-        <label id="drawContoursLabel"><input type="checkbox" name="draw_contours" value="true" id="drawContours" title="Shows which images were cropped from scans"> Draw contours</label><br>
-        <br>
-        <label>File name prefix (optional): <input type="text" name="file_prefix"></label><br>
-        <br>
-        <button type="submit">Upload and Process</button>
+        <label for="fileInput">Select Images</label>
+        <input id="fileInput" type="file" name="files[]" multiple accept="image/*" required>
+
+        <label><input type="checkbox" name="fix_orientation" value="true" checked> Fix Orientation</label>
+        <label><input type="checkbox" name="date_images" value="true" checked> Date Images</label>
+        <label><input type="checkbox" name="crop_images" value="true" id="cropImages"> Crop Images</label>
+        <label id="drawContoursLabel"><input type="checkbox" name="draw_contours" value="true" id="drawContours"> Draw Contours</label>
+
+        <label for="filePrefix">File Name Prefix (optional)</label>
+        <input type="text" id="filePrefix" name="file_prefix">
+
+        <button type="submit" id="processButton">Upload and Process</button>
+        <button type="button" id="downloadButton" style="display: none;">Download Images</button>
+
+        <div id="progressContainer" style="display:none;">
+            <div id="progressBar">
+                <div id="progressBarFill"></div>
+            </div>
+            <p id="progressText"></p>
+        </div>
+
+        <button type="button" id="startOver" style="display: none;">Start Over</button>
     </form>
-    <div id="message"></div>
-    <div id="countInfo"></div>
+
     <script>
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        let downloadUrl = '';
+        let uploadedImagesCount = 0;
+        const uploadForm = document.getElementById('uploadForm');
+        const processButton = document.getElementById('processButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const startOverButton = document.getElementById('startOver');
+        const progressContainer = document.getElementById('progressContainer');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            var formData = new FormData(this);
-            document.getElementById('message').innerText = 'Processing images...';
-            document.getElementById('countInfo').innerText = '';
+            const formData = new FormData(this);
+            processButton.disabled = true;
+            processButton.textContent = 'Processing...';
+            processButton.classList.add('disabled');
+            progressContainer.style.display = 'block';
+            uploadedImagesCount = fileInput.files.length;
+
             fetch('/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    document.getElementById('message').innerText = 'Error: ' + data.error;
-                } else {
-                    document.getElementById('message').innerHTML = data.message + ' <a href="' + data.download_url + '">Download processed images</a>';
-                    document.getElementById('countInfo').innerText = `Uploaded: ${data.uploaded_count}, Processed: ${data.processed_count}`;
-                }
-            })
-            .catch(error => {
-                document.getElementById('message').innerText = 'Error: ' + error.message;
-                console.error('Error:', error);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        downloadUrl = data.download_url;
+                        processButton.style.display = 'none';
+                        downloadButton.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                    console.error('Error:', error);
+                });
+
+            // Poll progress
+            let intervalId = setInterval(function () {
+                fetch('/api/progress')
+                    .then(response => response.json())
+                    .then(progressData => {
+                        const { num_images, current_image_num } = progressData;
+                        if (num_images > 0) {
+                            const progressPercentage = Math.round((current_image_num / num_images) * 100);
+                            document.getElementById('progressBarFill').style.width = progressPercentage + '%';
+                            document.getElementById('progressText').innerText = `Processed ${current_image_num} of ${num_images} images...`;
+
+                            if (current_image_num >= num_images) {
+                                clearInterval(intervalId);
+                                if (num_images !== uploadedImagesCount) {
+                                    alert(`Error: ${uploadedImagesCount - num_images} image(s) were not processed. Please run again with 'Draw Contours' enabled to find the missing image(s).`);
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching progress:', error);
+                        clearInterval(intervalId);
+                    });
+            }, 750);
         });
 
         // Handle the dependency between "Crop images" and "Draw contours" checkboxes
@@ -74,6 +245,17 @@
 
         // Initial state setup
         document.getElementById('cropImages').dispatchEvent(new Event('change'));
+
+
+        downloadButton.addEventListener('click', function() {
+            window.location.href = downloadUrl;
+            startOverButton.style.display = 'block';
+        });
+
+        startOverButton.addEventListener('click', function () {
+            location.reload();
+        });
     </script>
 </body>
+
 </html>
