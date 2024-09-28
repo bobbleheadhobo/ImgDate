@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Img Date</title>
     <link rel="stylesheet" href="../static/css/styles.css">
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=_turnstileCb" defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 
 <body>
@@ -26,9 +26,13 @@
 
         <div id="dateOptionsBox" class="options-box" style="display: none;">
             <h3>Date Format Options</h3>
-            <label><input type="radio" name="dateFormat" value="mm_dd_yy" checked> MM DD 'YY</label>
-            <label><input type="radio" name="dateFormat" value="yy_mm_dd"> 'YY MM DD</label>
-            <label><input type="radio" name="dateFormat" value="universal"> Universal</label>
+        <div class="date-notice-container">
+            <p class="date-notice">Date must be in bottom right corner for landscape photos</p>
+            <p class="date-notice">Date must be in bottom left corner for portrait photos</p>
+        </div>
+            <label><input type="radio" name="date_format" value="mm_dd_yy" checked> MM DD 'YY</label>
+            <label><input type="radio" name="date_format" value="yy_mm_dd"> 'YY MM DD</label>
+            <label><input type="radio" name="date_format" value="universal"> Universal</label>
         </div>
 
         <label><input type="checkbox" name="crop_images" value="true" id="cropImages"> Crop Images</label>
@@ -37,7 +41,7 @@
         <label for="filePrefix">File Name Prefix (optional)</label>
         <input type="text" id="filePrefix" name="file_prefix">
 
-        <div class="cf-turnstile" data-sitekey="YOUR_SITE_KEY"></div>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAAk0dmheOZ2KY_fB"></div>
 
         <button type="submit" id="processButton" class="green-btn">Upload and Process</button>
         <button type="button" id="downloadButton" class="green-btn" style="display: none;">Download Images</button>
@@ -54,15 +58,6 @@
     </form>
 
     <script src="../static/js/script.js"></script>
-
-    <script>
-        function _turnstileCb() {
-          turnstile.render('.cf-turnstile', {
-            sitekey: '0x4AAAAAAAk0dmheOZ2KY_fB',
-            theme: 'light',  // Optional: 'light' or 'dark'
-          });
-        }
-      </script>
 </body>
 
 </html>

@@ -49,7 +49,7 @@ class DateExtractor:
         # return base64_img
         return cropped_img
     
-    def get_prompt(self):
+    def get_prompt(self):        
         if not s.date_format:
             self.log.error("Error setting prompt: date_format not set.")
             return '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder'''

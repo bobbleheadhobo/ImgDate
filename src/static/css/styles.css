@@ -176,7 +176,6 @@ input[type="checkbox"] {
 
 .options-box h3 {
     font-size: 1.1em;
-    margin-bottom: 10px;
     color: #333;
 }
 
@@ -184,4 +183,18 @@ input[type="checkbox"] {
     display: block;
     margin-bottom: 5px;
     font-size: 1em;
+}
+
+.date-options-container input[type="text"] {
+    width: 100%;
+    padding: 5px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+.date-notice{
+    font-size: 0.9em;
+    color: red;
+    margin: 2px 0;
+    font-weight: bold;
 }

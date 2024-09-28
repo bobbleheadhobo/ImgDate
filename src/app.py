@@ -10,10 +10,13 @@ import threading
 import time
 from dotenv import load_dotenv
 import SharedVariables as s
+from LoggerConfig import setup_logger
 
 app = Flask(__name__)
 
+load_dotenv()
 TURNSTILE_KEY = os.getenv('CF_TURNSTILE_KEY')
+log = setup_logger("WebServer", "../log/webserver.log")
 
 # Configuration
 UPLOAD_FOLDER = '../img/web/uploads'
@@ -37,9 +40,9 @@ def delayed_file_deletion(file_path, delay=10):
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                app.logger.info(f"Successfully deleted file: {file_path}")
+                log.info(f"Successfully deleted file: {file_path}")
         except Exception as e:
-            app.logger.error(f"Error removing zip file after delay: {str(e)}")
+            log.error(f"Error removing zip file after delay: {str(e)}")
 
     thread = threading.Thread(target=delete_file)
     thread.start()
@@ -60,10 +63,14 @@ def get_progress():
 
 @app.route('/upload', methods=['POST'])
 def upload_and_process():
+
+    # Reset shared variables
+
     
     turnstile_response = request.form.get('cf-turnstile-response')
-    if not check_turnstile(turnstile_response):
-        return jsonify({'error': 'Invalid token'}), 403
+    visitor_ip = request.headers.get('CF-Connecting-IP')
+    if not check_turnstile(turnstile_response, visitor_ip):
+        return jsonify({'error': 'Human Verification Failed. Please reload the page and try again.'}), 403
     
     if 'files[]' not in request.files:
         return jsonify({'error': 'No file part'}), 400
@@ -76,13 +83,13 @@ def upload_and_process():
     # Create a unique identifier for this batch
     batch_id = str(uuid.uuid4())
     
-    # Reset shared variables
-    s.reset()
+
     
     # Create a temporary directory for this upload
     with tempfile.TemporaryDirectory() as tmpdirname:
         scans_path = os.path.join(tmpdirname, 'scans')
         save_path = os.path.join(tmpdirname, 'processed')
+        contours_path = os.path.join(scans_path, 'contours')
         error_path = os.path.join(save_path, 'Failed')
 
         os.makedirs(scans_path)
@@ -128,7 +135,7 @@ def upload_and_process():
                     os.rename(old_path, new_path)
 
         # Create a zip file of processed images
-        zip_filename = f'processed_images_{batch_id}.zip'
+        zip_filename = f'ImgDate_{batch_id}.zip'
         zip_path = os.path.join(app.config['PROCESSED_FOLDER'], zip_filename)
         processed_count = 0
         with zipfile.ZipFile(zip_path, 'w') as zipf:
@@ -138,10 +145,20 @@ def upload_and_process():
                                os.path.relpath(os.path.join(root, file), save_path))
                     processed_count += 1
 
-        message = 'Images processed successfully'
-        if uploaded_count != processed_count:
-            message += f'. Warning: {uploaded_count - processed_count} images are missing from the processed output. Consider running again with contours enabled.'
 
+            # If contours are drawn, zip the contours folder
+            if request.form.get('draw_contours') == 'true' and os.path.exists(contours_path):
+                for root, _, files in os.walk(contours_path):
+                    for file in files:
+                        zipf.write(os.path.join(root, file), 
+                                   os.path.relpath(os.path.join(root, file), scans_path))
+                        
+        message = 'Images processed successfully'
+
+        time.sleep(1)  # Ensure progress is updated before resetting shared variables
+        s.reset()
+        log.info(f"Reset shared variables {s.num_images, s.current_image_num}")
+        
         return jsonify({
             'message': message, 
             'download_url': f'/download/{batch_id}',
@@ -151,7 +168,7 @@ def upload_and_process():
 
 @app.route('/download/<batch_id>')
 def download(batch_id):
-    zip_filename = f'processed_images_{batch_id}.zip'
+    zip_filename = f'ImgDate_{batch_id}.zip'
     zip_path = os.path.join(app.config['PROCESSED_FOLDER'], zip_filename)
     
     if not os.path.exists(zip_path):
@@ -160,28 +177,28 @@ def download(batch_id):
     try:
         return send_file(zip_path, as_attachment=True, download_name=zip_filename)
     except Exception as e:
-        app.logger.error(f"Error sending file: {str(e)}")
+        log.error(f"Error sending file: {str(e)}")
         return jsonify({'error': 'Failed to send file'}), 500
     finally:
         # Schedule the zip file for deletion after a delay
         delayed_file_deletion(zip_path)
         
 
-def check_turnstile(turnstile_response):
+def check_turnstile(turnstile_response, visitor_ip):
     try:
         response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
             data={
                 'secret': TURNSTILE_KEY,
-                'response': turnstile_response
+                'response': turnstile_response,
+                'remoteip': visitor_ip
                 }
         )
 
         response.raise_for_status()
-        print("response")
-        print(response)
+        log.info(f"Turnstile response: {response.text}")
         result = response.json()
     except Exception as e:
-        app.logger.error(f"Error verifying turnstile token: {str(e)}")
+        log.error(f"Error verifying turnstile token: {str(e)}")
         return False
 
     return result.get('success')
