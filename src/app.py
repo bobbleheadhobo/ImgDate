@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, send_file, jsonify
+import requests
 from werkzeug.utils import secure_filename
 import os
 from ImageOrganizer import ImageOrganizer
@@ -7,9 +8,12 @@ import zipfile
 import uuid
 import threading
 import time
+from dotenv import load_dotenv
 import SharedVariables as s
 
 app = Flask(__name__)
+
+TURNSTILE_KEY = os.getenv('CF_TURNSTILE_KEY')
 
 # Configuration
 UPLOAD_FOLDER = '../img/web/uploads'
@@ -56,6 +60,11 @@ def get_progress():
 
 @app.route('/upload', methods=['POST'])
 def upload_and_process():
+    
+    turnstile_response = request.form.get('cf-turnstile-response')
+    if not check_turnstile(turnstile_response):
+        return jsonify({'error': 'Invalid token'}), 403
+    
     if 'files[]' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     
@@ -88,6 +97,8 @@ def upload_and_process():
                 file.save(os.path.join(scans_path, filename))
                 uploaded_count += 1
 
+        s.date_format = request.form.get('date_format', None)
+        
         # Process images
         image_organizer = ImageOrganizer(
             save_path=save_path,
@@ -154,6 +165,21 @@ def download(batch_id):
     finally:
         # Schedule the zip file for deletion after a delay
         delayed_file_deletion(zip_path)
+        
+
+def check_turnstile(turnstile_response):
+    response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        data={
+            'secret': TURNSTILE_KEY,',
+            'response': turnstile_response
+            }
+    )
+
+    result = response.json()
+    print(result)
+    
+    return result.get('success')
+    
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=8888)

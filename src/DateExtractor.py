@@ -7,8 +7,9 @@ import os
 from dotenv import load_dotenv
 import pyexiv2
 from LoggerConfig import setup_logger
-
+import SharedVariables as s
 import requests
+
 
 class DateExtractor:
 
@@ -47,13 +48,26 @@ class DateExtractor:
 
         # return base64_img
         return cropped_img
+    
+    def get_prompt(self):
+        if not s.date_format:
+            self.log.error("Error setting prompt: date_format not set.")
+            return '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder'''
+        
+        if s.date_format == 'mm_dd_yy':
+            return '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
+        if s.date_format == 'yy_mm_dd':
+            return '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'yy mm dd'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., '12 8 9). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "'yy mm dd". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
+        if s.date_format == 'universal':
+            return '''This is a film image that contains a date, typically displayed in orange or red dot-matrix text. The date will be in one of two formats: "'YY MM DD" or "MM DD 'YY". To differentiate between these formats, the year will always begin with an apostrophe ('). The image has been cropped to enlarge the text size for easier reading. Please read the date and return it in the format "MM DD 'YY". If the date is unclear or unreadable, respond with "date not found | confidence: -1". Provide a confidence score from 1 to 10 based on how accurately you believe the date was extracted. Example: "12 07 '01 | confidence: 10".'''
+            
 
     def read_date(self, base64_image, retries = 3):
         """
         Use gpt4o API to extract text from the processed image.
         """
-        # prompt = '''This is a film image that contains a date, typically in orange or red text. This image has been cropped down to enlarge the text size. The date will be in the format 'YY MM DD or MM DD 'YY. A way to differentiate the two dates is that the year will always start an apostrophe('). Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder."'''
-        prompt = '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder. '''
+    
+        prompt = self.get_prompt()
 
         headers = {
         "Content-Type": "application/json",
