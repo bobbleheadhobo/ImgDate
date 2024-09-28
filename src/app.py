@@ -168,16 +168,22 @@ def download(batch_id):
         
 
 def check_turnstile(turnstile_response):
-    response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
-        data={
-            'secret': TURNSTILE_KEY,',
-            'response': turnstile_response
-            }
-    )
+    try:
+        response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            data={
+                'secret': TURNSTILE_KEY,
+                'response': turnstile_response
+                }
+        )
 
-    result = response.json()
-    print(result)
-    
+        response.raise_for_status()
+        print("response")
+        print(response)
+        result = response.json()
+    except Exception as e:
+        app.logger.error(f"Error verifying turnstile token: {str(e)}")
+        return False
+
     return result.get('success')
     
 
