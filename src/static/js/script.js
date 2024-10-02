@@ -6,15 +6,55 @@ let downloadUrl = '';
     const startOverButton = document.getElementById('startOver');
     const progressContainer = document.getElementById('progressContainer');
     const fileInput = document.getElementById('fileInput');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    let wakeLock = null;
 
-    uploadForm.addEventListener('submit', function (e) {
+    async function requestWakeLock() {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+            console.error(`${err.name}, ${err.message}`);
+        }
+    }
+    
+    async function releaseWakeLock() {
+        if (wakeLock !== null) {
+            try {
+                await wakeLock.release();
+                wakeLock = null;
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+    }
+
+    function startLoadingAnimation() {
+        let dots = 0;
+        loadingInterval = setInterval(() => {
+            dots = (dots + 1) % 4;
+            processButton.textContent = 'Processing' + '.'.repeat(dots);
+        }, 500);
+    }
+    
+    function stopLoadingAnimation() {
+        clearInterval(loadingInterval);
+        processButton.textContent = 'Processing...';
+    }
+
+    uploadForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const formData = new FormData(this);
         processButton.disabled = true;
-        processButton.textContent = 'Processing...';
+        // processButton.textContent = 'Processing...';
         processButton.classList.add('disabled');
         progressContainer.style.display = 'block';
         uploadedImagesCount = fileInput.files.length;
+        fileInput.disabled = true;
+        checkboxes.forEach(checkbox => checkbox.disabled = true);
+
+        startLoadingAnimation();
+        await requestWakeLock();
+
 
         fetch('/upload', {
             method: 'POST',
@@ -22,7 +62,7 @@ let downloadUrl = '';
         })
             .then(response => {
                 if (response.status === 403) {
-                    throw new Error('Turntile verification failed. Please try again.');
+                    throw new Error('Human verification failed. Please try again.');
                 }
                 return response.json();
             })
@@ -44,7 +84,12 @@ let downloadUrl = '';
                 processButton.classList.remove('disabled');
                 progressContainer.style.display = 'none';
                 clearInterval(intervalId);
-
+                fileInput.disabled = false;
+                checkboxes.forEach(checkbox => checkbox.disabled = false);
+            })
+            .finally(() => {
+                stopLoadingAnimation();
+                releaseWakeLock();
             });
 
         // Poll progress
@@ -111,3 +156,39 @@ let downloadUrl = '';
             dateOptionsBox.style.display = dateOptionsBox.style.display === 'none' ? 'block' : 'none';
         });
     });
+
+    window.addEventListener('load', function() {
+        const popup1 = document.getElementById('usagePopup1');
+        const popup2 = document.getElementById('usagePopup2');
+        const nextButton = document.getElementById('nextButton');
+        const okButton = document.getElementById('okButton');
+        const dontShowAgainButton = document.getElementById('dontShowAgainButton');
+    
+        // Check if popups exist before attempting to manipulate them
+        if (popup1 && popup2 && nextButton && okButton && dontShowAgainButton) {
+            // Check if the user has previously selected "Don't Show Again"
+            if (!localStorage.getItem('hideUsagePopup')) {
+                popup1.style.display = 'flex'; // Show the first popup
+            }
+    
+            // Show the second popup when "Next" is clicked
+            nextButton.addEventListener('click', function() {
+                popup1.style.display = 'none';  // Hide the first popup
+                popup2.style.display = 'flex'; // Show the second popup
+            });
+    
+            // Hide all popups when "OK" is clicked
+            okButton.addEventListener('click', function() {
+                popup2.style.display = 'none';  // Hide the second popup
+            });
+    
+            // Don't show popups again when "Don't Show Again" is clicked
+            dontShowAgainButton.addEventListener('click', function() {
+                localStorage.setItem('hideUsagePopup', 'true');  // Save preference
+                popup2.style.display = 'none';  // Hide the second popup
+            });
+        } else {
+            console.error('One or more popup elements were not found.');
+        }
+    });
+    

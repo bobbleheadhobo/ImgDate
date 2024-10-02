@@ -11,7 +11,7 @@
 
 <body>
     <h1>Img Date</h1>
-    <a href="https://github.com/your-repo" target="_blank" class="github-corner">
+    <a href="https://github.com/bobbleheadhobo" target="_blank" class="github-corner">
         <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" alt="GitHub Logo" class="github-logo">
     </a>
     <form id="uploadForm" enctype="multipart/form-data">
@@ -59,5 +59,44 @@
 
     <script src="../static/js/script.js"></script>
 </body>
+
+<div id="usagePopup1" class="popup">
+    <div class="popup-content">
+        <h2>Welcome to Img Date!</h2>
+        <p>Img Date helps you process scanned or digital film images efficiently. Let’s start with cropping your images:</p>
+        <ul>
+            <li>Select "Crop Images" if you are uploading scans containing multiple images.</li>
+            <li>It is recommended to enable "Draw Contours" to see if any images were missed in the cropping process</li>
+        </ul>
+        <button id="nextButton" class="popup-btn">Next</button>
+    </div>
+</div>
+
+<div id="usagePopup2" class="popup" style="display: none;">
+    <div class="popup-content">
+        <h2>Dating Your Images</h2>
+        <p>If your images have date stamps, Img Date can set the file’s date to match the date on the image:</p>
+        <ul>
+            <li>Select "Date Images" to automatically read the date stamps on your images.</li>
+            <li>Ensure the date stamp is in the correct position for accurate detection:
+                <ul>
+                    <li>For landscape images, the date should be in the bottom right corner.</li>
+                    <li>For portrait images, the date should be in the bottom left corner.</li>
+                </ul>
+            </li>
+        </ul>
+        <div class="date-images">
+            <img src="{{ url_for('static', filename='images/digitized_film_date_10-08-2003_04.jpg') }}" alt="Landscape Date Location" title="Landscape image date position">
+            <img src="{{ url_for('static', filename='images/digitized_film_date_10-08-2003_03.jpg') }}" alt="Portrait Date Location" title="Portrait image date position">
+        </div>  
+        <p><strong>Please verify the dates after processing, as errors may occur.</strong></p>
+        <p>Once you’ve reviewed the options, you're ready to get started!</p>
+        <button id="okButton" class="popup-btn">OK</button>
+        <button id="dontShowAgainButton" class="popup-btn">Don't Show Again</button>
+    </div>
+</div>
+
+
+
 
 </html>
