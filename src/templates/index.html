@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Img Date</title>
+    <link rel="icon" href="../static/images/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="../static/css/styles.css">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
@@ -17,10 +18,10 @@
     <form id="uploadForm" enctype="multipart/form-data">
         <label for="fileInput">Select Images</label>
         <input id="fileInput" type="file" name="files[]" multiple accept="image/*" required>
-        <label><input type="checkbox" name="fix_orientation" value="true" checked> Fix Orientation</label>
+        <label><input type="checkbox" name="fix_orientation" value="true" title="Automatically detects and corrects the orientation of photos using facial recognition." checked> Fix Orientation</label>
 
         <div class="date-options-container">
-            <label><input type="checkbox" name="date_images" value="true" checked> Date Images</label>
+            <label><input type="checkbox" name="date_images" value="true" checked title="Extract and sets dates from scanned photos."> Date Images</label>
             <button type="button" id="dateOptionsBtn" class="options-btn">⚙️</button>
         </div>
 
@@ -35,8 +36,10 @@
             <label><input type="radio" name="date_format" value="universal"> Universal</label>
         </div>
 
-        <label><input type="checkbox" name="crop_images" value="true" id="cropImages"> Crop Images</label>
-        <label id="drawContoursLabel"><input type="checkbox" name="draw_contours" value="true" id="drawContours"> Draw Contours</label>
+        <label><input type="checkbox" name="crop_images" value="true" id="cropImages" title="Crops images out of scans"> Crop Images</label>
+        <label id="drawContoursLabel"><input type="checkbox" name="draw_contours" value="true" id="drawContours" title="Shows which images were cropped from scans"> Draw Contours</label>
+
+        <label><input type="checkbox" name="sort_images" value="true" title="Sorts processed images into folders by year and month."> Sort images by date</label>
 
         <label for="filePrefix">File Name Prefix (optional)</label>
         <input type="text" id="filePrefix" name="file_prefix">
@@ -65,9 +68,12 @@
         <h2>Welcome to Img Date!</h2>
         <p>Img Date helps you process scanned or digital film images efficiently. Let’s start with cropping your images:</p>
         <ul>
-            <li>Select "Crop Images" if you are uploading scans containing multiple images.</li>
+            <li>Select "Crop Images" if you are uploading scans containing multiple images. Please look at the example below.</li>
             <li>It is recommended to enable "Draw Contours" to see if any images were missed in the cropping process</li>
         </ul>
+        <div class="scan-images">
+            <img src="{{ url_for('static', filename='images/scan.jpg') }}" alt="scan example" title="Scan example">
+        </div> 
         <button id="nextButton" class="popup-btn">Next</button>
     </div>
 </div>
@@ -78,21 +84,16 @@
         <p>If your images have date stamps, Img Date can set the file’s date to match the date on the image:</p>
         <ul>
             <li>Select "Date Images" to automatically read the date stamps on your images.</li>
-            <li>Ensure the date stamp is in the correct position for accurate detection:
-                <ul>
-                    <li>For landscape images, the date should be in the bottom right corner.</li>
-                    <li>For portrait images, the date should be in the bottom left corner.</li>
-                </ul>
-            </li>
+            <li>Ensure the date stamp is in the correct position for accurate detection: bottom right for landscape photos and bottom left for portrait photos. Please look at the example below.</li>
         </ul>
         <div class="date-images">
             <img src="{{ url_for('static', filename='images/digitized_film_date_10-08-2003_04.jpg') }}" alt="Landscape Date Location" title="Landscape image date position">
             <img src="{{ url_for('static', filename='images/digitized_film_date_10-08-2003_03.jpg') }}" alt="Portrait Date Location" title="Portrait image date position">
         </div>  
         <p><strong>Please verify the dates after processing, as errors may occur.</strong></p>
-        <p>Once you’ve reviewed the options, you're ready to get started!</p>
+        <p>Now you're ready to get started!</p>
         <button id="okButton" class="popup-btn">OK</button>
-        <button id="dontShowAgainButton" class="popup-btn">Don't Show Again</button>
+        <button id="dontShowAgainButton" class="popup-btn" style="display: none;">Don't Show Again</button>
     </div>
 </div>
 

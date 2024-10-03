@@ -63,9 +63,6 @@ def get_progress():
 
 @app.route('/upload', methods=['POST'])
 def upload_and_process():
-
-    # Reset shared variables
-
     
     turnstile_response = request.form.get('cf-turnstile-response')
     visitor_ip = request.headers.get('CF-Connecting-IP')
@@ -84,6 +81,12 @@ def upload_and_process():
     batch_id = str(uuid.uuid4())
     
 
+    # Log the IP address and other details of the request
+    log.info("\n\n\n-----------------------------------")
+    log.info(f"Request received from IP: {visitor_ip}")
+    log.info(f"User Agent: {request.headers.get('User-Agent')}")
+    log.info(f"Referrer: {request.referrer}")
+    log.info(f"Uploaded files: {[file.filename for file in files]}")
     
     # Create a temporary directory for this upload
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -118,6 +121,15 @@ def upload_and_process():
             date_images=request.form.get('date_images') == 'true',
             draw_contours=request.form.get('draw_contours') == 'true'
         )
+
+        # Log the options chosen by the user
+        log.info(f"Options chosen: sort_images={request.form.get('sort_images')}, "
+                 f"fix_orientation={request.form.get('fix_orientation')}, "
+                 f"crop_images={request.form.get('crop_images')}, "
+                 f"date_images={request.form.get('date_images')}, "
+                 f"draw_contours={request.form.get('draw_contours')}, "
+                 f"date_format={request.form.get('date_format')}, "
+                 f"file_prefix={request.form.get('file_prefix')}")
         
         try:
             image_organizer.process_images()
@@ -153,11 +165,12 @@ def upload_and_process():
                         zipf.write(os.path.join(root, file), 
                                    os.path.relpath(os.path.join(root, file), scans_path))
                         
-        message = 'Images processed successfully'
+        log.info(f"Processed {processed_count} images successfully")
+        log.info("Finished processing request")
+        message = "Images processed successfully"
 
         time.sleep(1)  # Ensure progress is updated before resetting shared variables
         s.reset()
-        log.info(f"Reset shared variables {s.num_images, s.current_image_num}")
         
         return jsonify({
             'message': message, 
