@@ -108,6 +108,7 @@ def upload_and_process():
                 uploaded_count += 1
 
         s.date_format = request.form.get('date_format', None)
+        s.date_range = request.form.get('date_range', None)
         
         # Process images
         image_organizer = ImageOrganizer(
@@ -123,13 +124,15 @@ def upload_and_process():
         )
 
         # Log the options chosen by the user
-        log.info(f"Options chosen: sort_images={request.form.get('sort_images')}, "
-                 f"fix_orientation={request.form.get('fix_orientation')}, "
-                 f"crop_images={request.form.get('crop_images')}, "
-                 f"date_images={request.form.get('date_images')}, "
-                 f"draw_contours={request.form.get('draw_contours')}, "
-                 f"date_format={request.form.get('date_format')}, "
-                 f"file_prefix={request.form.get('file_prefix')}")
+        log.info("Options chosen:\n"
+                 f"fix_orientation={request.form.get('fix_orientation')}\n"
+                 f"date_images={request.form.get('date_images')}\n"
+                 f"date_format={request.form.get('date_format')}\n"
+                 f"date_range={request.form.get('date_range')}\n"
+                 f"crop_images={request.form.get('crop_images')}\n"
+                 f"draw_contours={request.form.get('draw_contours')}\n"
+                 f"sort_images={request.form.get('sort_images')}\n"
+                 f"file_prefix={request.form.get('file_prefix')}\n")
         
         try:
             image_organizer.process_images()

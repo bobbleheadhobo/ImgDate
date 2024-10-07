@@ -7,6 +7,7 @@
     <title>Img Date</title>
     <link rel="icon" href="../static/images/favicon.png" type="image/x-icon">
     <link rel="stylesheet" href="../static/css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 
@@ -26,14 +27,20 @@
         </div>
 
         <div id="dateOptionsBox" class="options-box" style="display: none;">
-            <h3>Date Format Options</h3>
-        <div class="date-notice-container">
-            <p class="date-notice">Date must be in bottom right corner for landscape photos</p>
-            <p class="date-notice">Date must be in bottom left corner for portrait photos</p>
-        </div>
+            <h3>Date Settings</h3>
+            <div class="date-notice-container">
+                <p class="date-notice">Date must be in bottom right corner for landscape photos</p>
+                <p class="date-notice">Date must be in bottom left corner for portrait photos</p>
+            </div>
+            <label for="dateRange">Select the date format from your images:</label>
             <label><input type="radio" name="date_format" value="mm_dd_yy" checked> MM DD 'YY</label>
             <label><input type="radio" name="date_format" value="yy_mm_dd"> 'YY MM DD</label>
             <label><input type="radio" name="date_format" value="universal"> Universal</label>
+            <hr>
+            <div class="date-range-container">
+                <label for="dateRange">Select range of dates from your images (optional):</label>
+                <input type="text" id="dateRange" name="date_range" placeholder="Select date range">
+            </div>
         </div>
 
         <label><input type="checkbox" name="crop_images" value="true" id="cropImages" title="Crops images out of scans"> Crop Images</label>
@@ -59,6 +66,9 @@
 
         <button type="button" id="startOver" style="display: none;">Start Over</button>
     </form>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script src="../static/js/script.js"></script>
 </body>

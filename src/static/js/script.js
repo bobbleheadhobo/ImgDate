@@ -9,6 +9,13 @@ let downloadUrl = '';
     const checkboxes = document.querySelectorAll('input[type="checkbox"]');
     let wakeLock = null;
 
+    // Initialize Flatpickr date range picker
+    flatpickr("#dateRange", {
+        mode: "range",
+        dateFormat: "m/d/Y",
+        defaultDate: ["",""]
+    });
+
     async function requestWakeLock() {
         try {
             wakeLock = await navigator.wakeLock.request('screen');
@@ -38,16 +45,21 @@ let downloadUrl = '';
     
     function stopLoadingAnimation() {
         clearInterval(loadingInterval);
-        processButton.textContent = 'Processing...';
+        processButton.textContent = 'Process and upload';
     }
 
     uploadForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const formData = new FormData(this);
+
+        // Get the selected date range
+        const dateRange = document.getElementById('dateRange').value;
+        formData.append('date_range', dateRange);
+
         processButton.disabled = true;
-        // processButton.textContent = 'Processing...';
         processButton.classList.add('disabled');
         progressContainer.style.display = 'block';
+
         uploadedImagesCount = fileInput.files.length;
         fileInput.disabled = true;
         checkboxes.forEach(checkbox => checkbox.disabled = true);
@@ -69,6 +81,7 @@ let downloadUrl = '';
             .then(data => {
                 if (data.error) {
                     alert('Error: ' + data.error);
+                    console.error('Data error:', data.error);
                 } else {
                     downloadUrl = data.download_url;
                     processButton.style.display = 'none';
@@ -78,18 +91,18 @@ let downloadUrl = '';
             })
             .catch(error => {
                 alert('Error: ' + error.message);
+                console.error('Error:', error);
 
-                const progressBarFill = document.getElementById('progressBarFill'); //bad fix for a bug
-                if (progressBarFill.style.width === '0%') {
-                    console.error('Error:', error);
-                    processButton.disabled = false;
-                    processButton.textContent = 'Process';
-                    processButton.classList.remove('disabled');
-                    progressContainer.style.display = 'none';
-                    clearInterval(intervalId);
-                    fileInput.disabled = false;
-                    checkboxes.forEach(checkbox => checkbox.disabled = false);
-                }
+                
+                console.error('Error:', error);
+                processButton.disabled = false;
+                processButton.textContent = 'Process and upload';
+                processButton.classList.remove('disabled');
+                progressContainer.style.display = 'none';
+                clearInterval(intervalId);
+                fileInput.disabled = false;
+                checkboxes.forEach(checkbox => checkbox.disabled = false);
+                
             })
             .finally(() => {
                 stopLoadingAnimation();
