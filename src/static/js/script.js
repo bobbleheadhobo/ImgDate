@@ -62,7 +62,7 @@ let downloadUrl = '';
         })
             .then(response => {
                 if (response.status === 403) {
-                    throw new Error('Human verification failed. Please try again.');
+                    throw new Error('Human verification failed. Please reload and try again.');
                 }
                 return response.json();
             })
@@ -78,14 +78,18 @@ let downloadUrl = '';
             })
             .catch(error => {
                 alert('Error: ' + error.message);
-                console.error('Error:', error);
-                processButton.disabled = false;
-                processButton.textContent = 'Process';
-                processButton.classList.remove('disabled');
-                progressContainer.style.display = 'none';
-                clearInterval(intervalId);
-                fileInput.disabled = false;
-                checkboxes.forEach(checkbox => checkbox.disabled = false);
+
+                const progressBarFill = document.getElementById('progressBarFill'); //bad fix for a bug
+                if (progressBarFill.style.width === '0%') {
+                    console.error('Error:', error);
+                    processButton.disabled = false;
+                    processButton.textContent = 'Process';
+                    processButton.classList.remove('disabled');
+                    progressContainer.style.display = 'none';
+                    clearInterval(intervalId);
+                    fileInput.disabled = false;
+                    checkboxes.forEach(checkbox => checkbox.disabled = false);
+                }
             })
             .finally(() => {
                 stopLoadingAnimation();

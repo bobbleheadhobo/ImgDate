@@ -20,10 +20,13 @@ class DateExtractor:
     
         self.crop_height = 0.8
         self.crop_width = 0.70
+        self.MIN_YEAR = 1985
+        
         load_dotenv()
         self.api_key = os.getenv('OPENAI_API_KEY')
+        self.FINE_TUNED_MODEL = os.getenv('FINE_TUNED_MODEL')
+        
         self.log = setup_logger("DateExtractor", "..\log\ImgDate.log")
-        self.MIN_YEAR = 1985
 
     def crop_date_64(self, img, base_64 = True):
         """
@@ -59,7 +62,7 @@ class DateExtractor:
         if s.date_format == 'yy_mm_dd':
             return '''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'yy mm dd'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., '12 8 9). Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "'yy mm dd". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
         if s.date_format == 'universal':
-            return '''This is a film image that contains a date, typically displayed in orange or red dot-matrix text. The date will be in one of two formats: "'YY MM DD" or "MM DD 'YY". To differentiate between these formats, the year will always begin with an apostrophe ('). The image has been cropped to enlarge the text size for easier reading. Please read the date and return it in the format "MM DD 'YY". If the date is unclear or unreadable, respond with "date not found | confidence: -1". Provide a confidence score from 1 to 10 based on how accurately you believe the date was extracted. Example: "12 07 '01 | confidence: 10".'''
+            return '''This film image contains a date, typically displayed in orange or red dot-matrix text. The date will be in one of two formats: "'YY MM DD" or "MM DD 'YY". The year will always begin with an apostrophe (') to differentiate between these formats. It is your job to identify the correct date format accurately. Please read the date and return it in the format "MM DD 'YY". Respond only with the date and a confidence level from 1 to 10 based on how certain you are of its accuracy. Example: "12 07 '01 | confidence: 10". If the date is unclear or unreadable, respond with "date not found | confidence: -1" as a placeholder.'''
             
 
     def read_date(self, base64_image, retries = 3):
@@ -75,7 +78,7 @@ class DateExtractor:
         }
 
         payload = {
-        "model": "gpt-4o",
+        "model": self.FINE_TUNED_MODEL,
         "messages": [
             {
             "role": "user",
