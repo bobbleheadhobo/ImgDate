@@ -242,29 +242,23 @@ input[type="checkbox"] {
     background-color: #45a049;
 }
 
-.date-images {
+.date-images .scan-images {
     display: flex;
     justify-content: center;
     gap: 10px;
 }
 
 .date-images img {
-    max-width: 200px;
+    max-width: 300px;
     max-height: 100px;
-    border: 1px solid #ddd;
+    border: 1px solid rgb(164, 164, 164);
     border-radius: 5px;
 }
 
-
-.scan-images {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
 .scan-images img {
-    max-width: 100%;
+    margin: 10px;
+    max-width: 70%;
     height: auto;
-    border: 1px solid #ddd;
+    border: 2px solid rgb(164, 164, 164);
     border-radius: 5px;
 }

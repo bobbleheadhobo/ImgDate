@@ -169,7 +169,7 @@ def upload_and_process():
         log.info("Finished processing request")
         message = "Images processed successfully"
 
-        time.sleep(1)  # Ensure progress is updated before resetting shared variables
+        time.sleep(2)  # Ensure progress is updated before resetting shared variables
         s.reset()
         
         return jsonify({
