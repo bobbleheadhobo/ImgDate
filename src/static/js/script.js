@@ -82,17 +82,17 @@ let downloadUrl = '';
                 if (data.error) {
                     alert('Error: ' + data.error);
                     console.error('Data error:', data.error);
+                    
                 } else {
                     downloadUrl = data.download_url;
                     processButton.style.display = 'none';
                     downloadButton.style.display = 'block';
                     clearInterval(intervalId);
+                    clearInterval(timeoutId);
                 }
             })
             .catch(error => {
                 alert('Error: ' + error.message);
-                console.error('Error:', error);
-
                 
                 console.error('Error:', error);
                 processButton.disabled = false;
@@ -100,6 +100,7 @@ let downloadUrl = '';
                 processButton.classList.remove('disabled');
                 progressContainer.style.display = 'none';
                 clearInterval(intervalId);
+                clearInterval(timeoutId);
                 fileInput.disabled = false;
                 checkboxes.forEach(checkbox => checkbox.disabled = false);
                 
@@ -122,14 +123,22 @@ let downloadUrl = '';
 
                         if (current_image_num >= num_images) {
                             clearInterval(intervalId);
+                            clearInterval(timeoutId);
                         }
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching progress:', error);
                     clearInterval(intervalId);
+                    clearInterval(timeoutId);
                 });
         }, 750);
+        
+        // Set a timeout to clear the interval after 15 minutes (900,000 milliseconds)
+        let timeoutId = setTimeout(function () {
+            clearInterval(intervalId);
+            alert('Processing timed out after 15 minutes.');
+        }, 900000);
     });
 
     // Handle the dependency between "Crop images" and "Draw contours" checkboxes
