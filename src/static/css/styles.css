@@ -262,3 +262,46 @@ input[type="checkbox"] {
     border: 2px solid rgb(164, 164, 164);
     border-radius: 5px;
 }
+
+.file-input-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.file-input-label {
+    white-space: nowrap;
+    font-weight: bold;
+    margin-bottom: 0; /* Override the default margin */
+}
+
+#infoButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0;
+    margin-left: auto;
+    width: auto; /* Override the default width */
+}
+
+/* Modify these existing styles */
+input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 10px 0;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    font-size: 1em;
+    background-color: #f9f9f9;
+    outline: none;
+}
+
+label {
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 10px;
+    color: #555;
+}

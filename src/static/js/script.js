@@ -1,220 +1,365 @@
+
+// Global variables
 let downloadUrl = '';
-    let uploadedImagesCount = 0;
-    const uploadForm = document.getElementById('uploadForm');
-    const processButton = document.getElementById('processButton');
-    const downloadButton = document.getElementById('downloadButton');
-    const startOverButton = document.getElementById('startOver');
-    const progressContainer = document.getElementById('progressContainer');
-    const fileInput = document.getElementById('fileInput');
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    let wakeLock = null;
+let uploadedImagesCount = 0;
+let wakeLock = null;
+let progressIntervalId = null;
+let batchId = null;
+let pollTimeoutId = null;
+let pollInterval = 2000;
+const maxPollInterval = 30000; // Maximum interval of 30 seconds
+let isPolling = false;
+let retryCount = 0;
+const maxRetries = 5;
 
-    // Initialize Flatpickr date range picker
-    flatpickr("#dateRange", {
-        mode: "range",
-        dateFormat: "m/d/Y",
-        defaultDate: ["",""]
-    });
+// DOM elements
+const uploadForm = document.getElementById('uploadForm');
+const processButton = document.getElementById('processButton');
+const downloadButton = document.getElementById('downloadButton');
+const startOverButton = document.getElementById('startOver');
+const progressContainer = document.getElementById('progressContainer');
+const fileInput = document.getElementById('fileInput');
+const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+const dateRange = document.getElementById('dateRange');
+const infoButton = document.getElementById('infoButton');
 
-    async function requestWakeLock() {
+// Initialize Flatpickr date range picker
+flatpickr(dateRange, {
+    mode: "range",
+    dateFormat: "m/d/Y",
+    defaultDate: ["", ""]
+});
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', initializeApp);
+uploadForm.addEventListener('submit', handleFormSubmit);
+downloadButton.addEventListener('click', handleDownload);
+startOverButton.addEventListener('click', () => location.reload());
+document.getElementById('cropImages').addEventListener('change', handleCropImagesChange);
+document.getElementById('dateOptionsBtn').addEventListener('click', toggleDateOptionsBox);
+
+// Wake Lock API
+async function requestWakeLock() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+        console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+    }
+}
+
+async function releaseWakeLock() {
+    if (wakeLock) {
         try {
-            wakeLock = await navigator.wakeLock.request('screen');
+            await wakeLock.release();
+            wakeLock = null;
         } catch (err) {
-            console.error(`${err.name}, ${err.message}`);
+            console.error(`Wake Lock release error: ${err.name}, ${err.message}`);
         }
     }
-    
-    async function releaseWakeLock() {
-        if (wakeLock !== null) {
-            try {
-                await wakeLock.release();
-                wakeLock = null;
-            } catch (err) {
-                console.error(`${err.name}, ${err.message}`);
+}
+
+// Loading animation
+let loadingInterval;
+function startLoadingAnimation() {
+    let dots = 0;
+    loadingInterval = setInterval(() => {
+        dots = (dots + 1) % 4;
+        processButton.textContent = 'Processing' + '.'.repeat(dots);
+    }, 500);
+}
+
+function stopLoadingAnimation() {
+    clearInterval(loadingInterval);
+    processButton.textContent = 'Upload and Process';
+}
+
+// Form submission
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('date_range', dateRange.value);
+
+    disableForm();
+    startLoadingAnimation();
+    await requestWakeLock();
+
+    try {
+        // First, verify the Turnstile
+        await verifyTurnstile(formData);
+
+        // If verification succeeds, start the upload
+        await startUpload(formData);
+
+        // Start polling for progress
+        startStatusPolling();
+
+        // Wait for the upload to complete
+        await waitForUploadCompletion();
+
+        // Handle successful upload
+        handleSuccessfulUpload();
+    } catch (error) {
+        handleUploadError(error);
+    } finally {
+        stopLoadingAnimation();
+        releaseWakeLock();
+    }
+}
+
+async function verifyTurnstile(formData) {
+    const response = await fetch('/verify-turnstile', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        if (response.status === 403) {
+            throw new Error('Human verification failed. Please reload and try again.');
+        }
+        throw new Error(`Turnstile verification failed: ${response.status}`);
+    }
+}
+
+async function startUpload(formData) {
+    const response = await fetch('/start-upload', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error(`Upload start failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (data.error) {
+        throw new Error(data.error);
+    }
+
+    // Store the batch ID for later use
+    batchId = data.batchId;
+}
+
+function startStatusPolling() {
+    isPolling = true;
+    pollStatus();
+}
+
+function stopStatusPolling() {
+    isPolling = false;
+    if (pollTimeoutId) {
+        clearTimeout(pollTimeoutId);
+        pollTimeoutId = null;
+    }
+}
+
+function pollStatus() {
+    if (!isPolling) return;
+
+    pollTimeoutId = setTimeout(async function () {
+        try {
+            const response = await fetch(`/api/status/${batchId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const statusData = await response.json();
+            updateProgressBar(statusData);
+
+            if (statusData.status === 'completed') {
+                stopStatusPolling();
+                handleSuccessfulUpload(statusData);
+            } else if (statusData.status === 'failed') {
+                stopStatusPolling();
+                throw new Error(statusData.error || 'Upload failed');
+            } else {
+                // Reset retry count on successful poll
+                retryCount = 0;
+                // Continue polling with exponential backoff
+                pollInterval = Math.min(pollInterval * 1.5, maxPollInterval);
+                pollStatus();
+            }
+        } catch (error) {
+            console.error('Error fetching status:', error);
+            retryCount++;
+            if (retryCount <= maxRetries) {
+                // Retry with exponential backoff
+                pollInterval = Math.min(pollInterval * 2, maxPollInterval);
+                pollStatus();
+            } else {
+                stopStatusPolling();
+                handleUploadError(new Error('Failed to fetch status after multiple retries'));
             }
         }
-    }
+    }, pollInterval);
+}
 
-    function startLoadingAnimation() {
-        let dots = 0;
-        loadingInterval = setInterval(() => {
-            dots = (dots + 1) % 4;
-            processButton.textContent = 'Processing' + '.'.repeat(dots);
-        }, 500);
-    }
-    
-    function stopLoadingAnimation() {
-        clearInterval(loadingInterval);
-        processButton.textContent = 'Process and upload';
-    }
-
-    uploadForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-
-        // Get the selected date range
-        const dateRange = document.getElementById('dateRange').value;
-        formData.append('date_range', dateRange);
-
-        processButton.disabled = true;
-        processButton.classList.add('disabled');
-        progressContainer.style.display = 'block';
-
-        uploadedImagesCount = fileInput.files.length;
-        fileInput.disabled = true;
-        checkboxes.forEach(checkbox => checkbox.disabled = true);
-
-        startLoadingAnimation();
-        await requestWakeLock();
-
-
-        fetch('/upload', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => {
-                if (response.status === 403) {
-                    throw new Error('Human verification failed. Please reload and try again.');
+async function waitForUploadCompletion() {
+    return new Promise((resolve, reject) => {
+        const checkCompletion = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/status/${batchId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    alert('Error: ' + data.error);
-                    console.error('Data error:', data.error);
-                    
-                } else {
-                    downloadUrl = data.download_url;
-                    processButton.style.display = 'none';
-                    downloadButton.style.display = 'block';
-                    clearInterval(intervalId);
-                    clearInterval(timeoutId);
+                const statusData = await response.json();
+                if (statusData.status === 'completed') {
+                    clearInterval(checkCompletion);
+                    resolve(statusData);
+                } else if (statusData.status === 'failed') {
+                    clearInterval(checkCompletion);
+                    reject(new Error(statusData.error || 'Upload failed'));
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
-                
-                console.error('Error:', error);
-                processButton.disabled = false;
-                processButton.textContent = 'Process and upload';
-                processButton.classList.remove('disabled');
-                progressContainer.style.display = 'none';
-                clearInterval(intervalId);
-                clearInterval(timeoutId);
-                fileInput.disabled = false;
-                checkboxes.forEach(checkbox => checkbox.disabled = false);
-                
-            })
-            .finally(() => {
-                stopLoadingAnimation();
-                releaseWakeLock();
-            });
-
-        // Poll progress
-        let intervalId = setInterval(function () {
-            fetch('/api/progress')
-                .then(response => response.json())
-                .then(progressData => {
-                    const { num_images, current_image_num } = progressData;
-                    if (num_images > 0) {
-                        const progressPercentage = Math.round((current_image_num / num_images) * 100);
-                        document.getElementById('progressBarFill').style.width = progressPercentage + '%';
-                        document.getElementById('progressText').innerText = `Processed ${current_image_num} of ${num_images} images...`;
-
-                        if (current_image_num >= num_images) {
-                            clearInterval(intervalId);
-                            clearInterval(timeoutId);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching progress:', error);
-                    clearInterval(intervalId);
-                    clearInterval(timeoutId);
-                });
-        }, 750);
-        
-        // Set a timeout to clear the interval after 15 minutes (900,000 milliseconds)
-        let timeoutId = setTimeout(function () {
-            clearInterval(intervalId);
-            alert('Processing timed out after 15 minutes.');
-        }, 900000);
+            } catch (error) {
+                clearInterval(checkCompletion);
+                reject(error);
+            }
+        }, 2000);
     });
+}
 
-    // Handle the dependency between "Crop images" and "Draw contours" checkboxes
-    document.getElementById('cropImages').addEventListener('change', function() {
-        var drawContoursLabel = document.getElementById('drawContoursLabel');
-        var drawContours = document.getElementById('drawContours');
-        if (this.checked) {
-            drawContoursLabel.classList.remove('disabled');
-            drawContours.disabled = false;
-        } else {
-            drawContoursLabel.classList.add('disabled');
-            drawContours.disabled = true;
-            drawContours.checked = false;
+function handleSuccessfulUpload(statusData) {
+    downloadUrl = `/download/${batchId}`;
+    processButton.style.display = 'none';
+    downloadButton.style.display = 'block';
+}
+
+function handleUploadError(error) {
+    alert('Error: ' + error.message);
+    console.error('Upload error:', error);
+    resetForm();
+    stopProgressPolling();
+}
+
+function handleVisibilityChange() {
+    if (document.hidden) {
+        // Page is hidden, pause polling
+        stopStatusPolling();
+    } else {
+        // Page is visible again, resume polling
+        if (batchId) {
+            startStatusPolling();
         }
-    });
+    }
+}
 
-    // Initial state setup
+// Add event listener for visibility change
+document.addEventListener('visibilitychange', handleVisibilityChange);
+
+
+function disableForm() {
+    document.getElementById('dateOptionsBtn').disabled = true;
+    processButton.disabled = true;
+    processButton.classList.add('disabled');
+    progressContainer.style.display = 'block';
+    uploadedImagesCount = fileInput.files.length;
+    fileInput.disabled = true;
+    checkboxes.forEach(checkbox => checkbox.disabled = true);
+}
+
+function resetForm() {
+    processButton.disabled = false;
+    processButton.classList.remove('disabled');
+    progressContainer.style.display = 'none';
+    fileInput.disabled = false;
+    checkboxes.forEach(checkbox => checkbox.disabled = false);
+}
+
+function updateProgressBar(statusData) {
+    const { current_image_num, num_images } = statusData;
+    if (num_images > 0) {
+        const progressPercentage = Math.round((current_image_num / num_images) * 100);
+        document.getElementById('progressBarFill').style.width = progressPercentage + '%';
+        document.getElementById('progressText').innerText = `Processed ${current_image_num} of ${num_images} images...`;
+    }
+}
+
+// UI Handlers
+function handleCropImagesChange() {
+    const drawContoursLabel = document.getElementById('drawContoursLabel');
+    const drawContours = document.getElementById('drawContours');
+    if (this.checked) {
+        drawContoursLabel.classList.remove('disabled');
+        drawContours.disabled = false;
+    } else {
+        drawContoursLabel.classList.add('disabled');
+        drawContours.disabled = true;
+        drawContours.checked = false;
+    }
+}
+
+function toggleDateOptionsBox(e) {
+    e.preventDefault();
+    const dateOptionsBox = document.getElementById('dateOptionsBox');
+    const isBoxVisible = dateOptionsBox.style.display === 'block';
+    this.style.transform = isBoxVisible ? 'rotate(0deg)' : 'rotate(90deg)';
+    dateOptionsBox.style.display = isBoxVisible ? 'none' : 'block';
+}
+
+function handleDownload() {
+    window.location.href = downloadUrl;
+    startOverButton.style.display = 'block';
+}
+
+// Initialize app
+function initializeApp() {
+    // Set up any initial state or event listeners
     document.getElementById('cropImages').dispatchEvent(new Event('change'));
 
-
-    downloadButton.addEventListener('click', function() {
-        window.location.href = downloadUrl;
-        startOverButton.style.display = 'block';
-    });
-
-    startOverButton.addEventListener('click', function () {
-        location.reload();
-    });
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const dateOptionsBtn = document.getElementById('dateOptionsBtn');
-        const dateOptionsBox = document.getElementById('dateOptionsBox');
+    // Add event listener for the info button
+    if (infoButton) {
+        infoButton.addEventListener('click', showUsagePopup);
+    }
     
-        dateOptionsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+    // Check for usage popup preferences
+    const hidePopup = localStorage.getItem('hideUsagePopup');
+    console.log('Initial hideUsagePopup value:', hidePopup);
+    
+    if (hidePopup !== 'true') {
+        console.log('Showing popup');
+        showUsagePopup();
+    } else {
+        closePopups();
+        console.log('Popup hidden due to user preference');
+    }
+}
 
-            const isBoxVisible = dateOptionsBox.style.display === 'block';
-            dateOptionsBtn.style.transform = isBoxVisible ? 'rotate(0deg)' : 'rotate(90deg)';
+// Usage popup handling
+function showUsagePopup() {
+    const popup1 = document.getElementById('usagePopup1');
+    const popup2 = document.getElementById('usagePopup2');
+    const nextButton = document.getElementById('nextButton');
+    const okButton = document.getElementById('okButton');
+    const dontShowAgainButton = document.getElementById('dontShowAgainButton');
 
-            dateOptionsBox.style.display = dateOptionsBox.style.display === 'none' ? 'block' : 'none';
+    if (popup1 && popup2 && nextButton && okButton && dontShowAgainButton) {
+        popup1.style.display = 'flex';
+        popup2.style.display = 'none';
+
+        nextButton.addEventListener('click', () => {
+            popup1.style.display = 'none';
+            popup2.style.display = 'flex';
         });
-    });
 
-    window.addEventListener('load', function() {
-        const popup1 = document.getElementById('usagePopup1');
-        const popup2 = document.getElementById('usagePopup2');
-        const nextButton = document.getElementById('nextButton');
-        const okButton = document.getElementById('okButton');
-        const dontShowAgainButton = document.getElementById('dontShowAgainButton');
+        okButton.addEventListener('click', () => {
+            closePopups();
+        });
+
+        dontShowAgainButton.addEventListener('click', () => {
+            console.log('Don\'t show again clicked');
+            localStorage.setItem('hideUsagePopup', 'true');
+            console.log('hideUsagePopup set to:', localStorage.getItem('hideUsagePopup'));
+            closePopups();
+        });
+    } else {
+        console.error('One or more popup elements were not found.');
+    }
+}
+
+function closePopups() {
+    const popup1 = document.getElementById('usagePopup1');
+    const popup2 = document.getElementById('usagePopup2');
     
-        // Check if popups exist before attempting to manipulate them
-        if (popup1 && popup2 && nextButton && okButton && dontShowAgainButton) {
-            // Check if the user has previously selected "Don't Show Again"
-            if (!localStorage.getItem('hideUsagePopup')) {
-                popup1.style.display = 'flex'; // Show the first popup
-            }
-    
-            // Show the second popup when "Next" is clicked
-            nextButton.addEventListener('click', function() {
-                popup1.style.display = 'none';  // Hide the first popup
-                popup2.style.display = 'flex'; // Show the second popup
-            });
-    
-            // Hide all popups when "OK" is clicked
-            okButton.addEventListener('click', function() {
-                popup2.style.display = 'none';  // Hide the second popup
-            });
-    
-            // Don't show popups again when "Don't Show Again" is clicked
-            dontShowAgainButton.addEventListener('click', function() {
-                localStorage.setItem('hideUsagePopup', 'true');  // Save preference
-                popup2.style.display = 'none';  // Hide the second popup
-            });
-        } else {
-            console.error('One or more popup elements were not found.');
-        }
-    });
-    
+    if (popup1 && popup2) {
+        popup1.style.display = 'none';
+        popup2.style.display = 'none';
+    }
+}
