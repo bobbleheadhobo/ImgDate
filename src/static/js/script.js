@@ -6,7 +6,7 @@ let wakeLock = null;
 let progressIntervalId = null;
 let batchId = null;
 let pollTimeoutId = null;
-let pollInterval = 2000;
+let pollInterval = 1000;
 const maxPollInterval = 30000; // Maximum interval of 30 seconds
 let isPolling = false;
 let retryCount = 0;
@@ -60,17 +60,17 @@ async function releaseWakeLock() {
 
 // Loading animation
 let loadingInterval;
-function startLoadingAnimation() {
+function startLoadingAnimation(text) {
     let dots = 0;
     loadingInterval = setInterval(() => {
         dots = (dots + 1) % 4;
-        processButton.textContent = 'Processing' + '.'.repeat(dots);
+        processButton.textContent = text + '.'.repeat(dots);
     }, 500);
 }
 
-function stopLoadingAnimation() {
+function stopLoadingAnimation(text) {
     clearInterval(loadingInterval);
-    processButton.textContent = 'Upload and Process';
+    processButton.textContent = text;
 }
 
 // Form submission
@@ -80,29 +80,26 @@ async function handleFormSubmit(e) {
     formData.append('date_range', dateRange.value);
 
     disableForm();
-    startLoadingAnimation();
+    startLoadingAnimation("Verifying");
     await requestWakeLock();
 
     try {
         // First, verify the Turnstile
         await verifyTurnstile(formData);
+        stopLoadingAnimation("Uploading");
+        startLoadingAnimation("Uploading");;
 
         // If verification succeeds, start the upload
         await startUpload(formData);
+        stopLoadingAnimation("Processing");
+        startLoadingAnimation("Processing");
+
 
         // Start polling for progress
         startStatusPolling();
 
-        // Wait for the upload to complete
-        await waitForUploadCompletion();
-
-        // Handle successful upload
-        handleSuccessfulUpload();
     } catch (error) {
-        handleUploadError(error);
-    } finally {
-        stopLoadingAnimation();
-        releaseWakeLock();
+        handleError(error);
     }
 }
 
@@ -137,6 +134,8 @@ async function startUpload(formData) {
 
     // Store the batch ID for later use
     batchId = data.batchId;
+
+
 }
 
 function startStatusPolling() {
@@ -169,7 +168,7 @@ function pollStatus() {
                 handleSuccessfulUpload(statusData);
             } else if (statusData.status === 'failed') {
                 stopStatusPolling();
-                throw new Error(statusData.error || 'Upload failed');
+                handleError(new Error('Failed to process images'));
             } else {
                 // Reset retry count on successful poll
                 retryCount = 0;
@@ -182,51 +181,31 @@ function pollStatus() {
             retryCount++;
             if (retryCount <= maxRetries) {
                 // Retry with exponential backoff
+                console.log(`Retrying in ${pollInterval}ms...`);
                 pollInterval = Math.min(pollInterval * 2, maxPollInterval);
                 pollStatus();
             } else {
+                console.error('Max retries reached. Stopping polling.');
                 stopStatusPolling();
-                handleUploadError(new Error('Failed to fetch status after multiple retries'));
+                handleError(new Error('Failed to fetch status after multiple retries'));
             }
         }
     }, pollInterval);
-}
-
-async function waitForUploadCompletion() {
-    return new Promise((resolve, reject) => {
-        const checkCompletion = setInterval(async () => {
-            try {
-                const response = await fetch(`/api/status/${batchId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const statusData = await response.json();
-                if (statusData.status === 'completed') {
-                    clearInterval(checkCompletion);
-                    resolve(statusData);
-                } else if (statusData.status === 'failed') {
-                    clearInterval(checkCompletion);
-                    reject(new Error(statusData.error || 'Upload failed'));
-                }
-            } catch (error) {
-                clearInterval(checkCompletion);
-                reject(error);
-            }
-        }, 2000);
-    });
 }
 
 function handleSuccessfulUpload(statusData) {
     downloadUrl = `/download/${batchId}`;
     processButton.style.display = 'none';
     downloadButton.style.display = 'block';
+    stopLoadingAnimation("Download Images");
+    releaseWakeLock();
 }
 
-function handleUploadError(error) {
+function handleError(error) {
     alert('Error: ' + error.message);
-    console.error('Upload error:', error);
+    console.error('Error:', error);
+    stopStatusPolling();
     resetForm();
-    stopProgressPolling();
 }
 
 function handleVisibilityChange() {
@@ -261,6 +240,8 @@ function resetForm() {
     progressContainer.style.display = 'none';
     fileInput.disabled = false;
     checkboxes.forEach(checkbox => checkbox.disabled = false);
+    stopLoadingAnimation("Upload and Process");
+    releaseWakeLock();
 }
 
 function updateProgressBar(statusData) {
@@ -269,6 +250,12 @@ function updateProgressBar(statusData) {
         const progressPercentage = Math.round((current_image_num / num_images) * 100);
         document.getElementById('progressBarFill').style.width = progressPercentage + '%';
         document.getElementById('progressText').innerText = `Processed ${current_image_num} of ${num_images} images...`;
+    }
+    else if (num_images === 0) {
+        document.getElementById('progressText').innerText = ``;
+    }
+    else {
+        log.error('Invalid number of images:', num_images);
     }
 }
 
