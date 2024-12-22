@@ -1,87 +1,112 @@
 # ImgDate: Automated Photo Digitization
 
 ## Description
-
 ImgDate is a powerful Python-based tool designed to streamline the process of digitizing and organizing printed photographs. It automates the tasks of cropping, date extraction, orientation correction, and metadata management for scanned images, making it an invaluable asset for preserving and cataloging personal or professional photo collections.
 
 ## Main Features
+- **Automatic Image Cropping**: Crops multiple images from a single scan
+- **Date Extraction**: Employs GPT-4 Vision to extract dates from scanned photos
+- **Metadata Management**: Updates EXIF data with extracted dates on the images
+- **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition (requires dlib)
+- **Date Editor**: Easily update the EXIF data of photos manually for the ones that the script failed to process
+- **Intelligent File Organization**: Sorts processed images into folders by year and month
+- **Multi-threading Support**: Enhances processing speed for large batches of images
+- **Web Interface**: User-friendly browser interface for easy image processing and date editing
 
-- **Automatic Image Cropping**: Crops multiple images from a single scan.
-<br>
-
-- **Date Extraction**: Employs GPT-4o Vision to extract dates from scanned photos.
-<br>
-
-- **Metadata Management**: Updates EXIF data with extracted dates on the images.
-<br>
-
-- **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition. Note: This feature requires successful installation of dlib and its dependencies
-<br>
-
-- **Date Editor**: Easily update the EXIF data of photos manually for the ones that the script failed to process.
-<br>
-
-- **Intelligent File Organization**: Sorts processed images into folders by year and month.
-<br>
-
-- **Multi-threading Support**: Enhances processing speed for large batches of images.
-<br>
-
-- **Error Handling**: Manages low-confidence date extractions and processing failures.
+## Prerequisites
+- Python 3.8 or higher
+- Windows operating system (for Visual Studio Build Tools)
+- OpenAI API key
+- 64-bit Python installation (required for dlib)
 
 ## Installation
 1. Clone the repository:
-git clone https://github.com/bobbleheadhobo/ImgDate.git
-<br>
-cd ImgDate
+   ```bash
+   git clone https://github.com/bobbleheadhobo/ImgDate.git
+   cd ImgDate
+   ```
 
-2. Install required dependencies:
-<br>
-pip install -r requirements.txt
+2. Install Microsoft Visual Studio Build Tools (required for dlib):
+   - Download Visual Studio Build Tools from [Microsoft's website](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   - Run the installer
+   - Select "Desktop development with C++"
+   - Make sure the following components are checked:
+     - MSVC Build Tools
+     - Windows 10 SDK
+     - C++ CMake tools for Windows
+   - Click Install
 
-3. Set up your OpenAI API key:
-<br>
-- Create a `.env` file in the project root
-<br>
-- Add your OpenAI API key: `OPENAI_API_KEY=your_api_key_here`
+3. Install required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Configuration
+4. Set up your OpenAI API key:
+   - Create a `.env` file in the project root
+   - Add your OpenAI API key:
+     ```
+     OPENAI_API_KEY=your_api_key_here
+     ```
 
-You can customize the behavior of ImgDate by modifying the parameters in the `ImageOrganizer` class initialization:
-
-
-```python
-image_organizer = ImageOrganizer(
- scans_path=r"..\img\unprocessed",
- save_path=r"..\img\processed",
- error_path=r"..\img\processed\Failed",
- archive_path=r"..\img\processed\archive",
- crop_images=True,
- date_images=True, 
- fix_orientation=True,
- archive_scans=True,
- sort_images=True
-)
-```
+### Troubleshooting Installation
+- If you encounter issues installing dlib, make sure you have Python 64-bit installed
+- After installing Visual Studio Build Tools, you may need to restart your computer
+- If the pip install still fails, you can try installing dlib separately first:
+  ```bash
+  pip install dlib
+  ```
 
 ## Usage
 
-1. Place your scans images in the `img/unprocessed` folder or any folder of your choice.
+### 1. Web Interface (Recommended)
+The simplest way to use ImgDate is through its web interface:
 
-2. Run the main script:
-    `python main.py organize` Crops, dates and organizes your images.
-<br>
+1. Start the web server:
+   ```bash
+   python app.py
+   ```
 
-    `python main.py edit` Opens the date editor allowing you to quickly update the date of your images.
-<br>
+2. Open your web browser and navigate to `http://localhost:5000`
 
-    `python main.py process` Crop, date and organize your photos then open the date editor to fix the images that failed.
+### 2. Command Line Interface
+For users who want quicker processing times and more features:
 
-3. Processed images will be saved in the `img/processed` folder or the folder of your choice
+1. Place your scanned images in the `img/unprocessed` folder
+2. Run one of the following commands:
+   ```bash
+   # Process and organize images automatically
+   python main.py organize
 
-<be>
-> [!IMPORTANT]
-> When scanning images the dates of the images must be in the top right for landscape position and top left for portrait position. Otherwise the script will look for the date in the wrong part of the image.
+   # Open the date editor for manually editing dates
+   python main.py edit
+
+   # Process images and then open editor for failed detections
+   python main.py process
+   ```
+3. Processed images will be saved in the `img/processed` folder by default
+4. Customize ImgDate's behavior by modifying the parameters in the `ImageOrganizer` class initialization:
+
+   ```python
+   image_organizer = ImageOrganizer(
+       scans_path=r"..\img\unprocessed",
+       save_path=r"..\img\processed",
+       error_path=r"..\img\processed\Failed",
+       archive_path=r"..\img\processed\archive",
+       crop_images=True,
+       date_images=True, 
+       fix_orientation=True,
+       archive_scans=True,
+       sort_images=True
+   )
+   ```
+
+## Important Notes
+- For accurate date detection, ensure dates appear in:
+  - Top right corner for landscape images
+  - Top left corner for portrait images
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+[Add your chosen license here]
