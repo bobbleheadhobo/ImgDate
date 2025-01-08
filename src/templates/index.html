@@ -21,11 +21,11 @@
             <label for="fileInput" class="file-input-label">Select Images</label>
             <button type="button" id="infoButton" title="Show usage information">ℹ️</button>
         </div>
-        <input id="fileInput" type="file" name="files[]" multiple accept="image/*" required>
+        <input id="fileInput" type="file" name="files[]" multiple accept=".jpg, .jpeg, .png, .tiff" required>
         <label><input type="checkbox" name="fix_orientation" value="true" title="Automatically detects and corrects the orientation of photos using facial recognition." checked> Fix Orientation</label>
 
         <div class="date-options-container">
-            <label><input type="checkbox" name="date_images" value="true" checked title="Extract and sets dates from scanned photos."> Date Images</label>
+            <label><input type="checkbox" name="date_images" value="true" checked title="Reads and sets dates on the photos."> Read Dates</label>
             <button type="button" id="dateOptionsBtn" class="options-btn">⚙️</button>
         </div>
 
@@ -38,7 +38,7 @@
             <label for="dateRange">Select the date format from your images:</label>
             <label><input type="radio" name="date_format" value="mm_dd_yy" checked> MM DD 'YY</label>
             <label><input type="radio" name="date_format" value="yy_mm_dd"> 'YY MM DD</label>
-            <label><input type="radio" name="date_format" value="universal"> Universal</label>
+            <label><input type="radio" name="date_format" value="universal"> Both</label>
             <hr>
             <div class="date-range-container">
                 <label for="dateRange">Select range of dates from your images (optional):</label>

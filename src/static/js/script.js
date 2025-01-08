@@ -73,17 +73,47 @@ function stopLoadingAnimation(text) {
     processButton.textContent = text;
 }
 
+const ALLOWED_FILE_TYPES = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/tiff'
+]);
+
+// File validation function
+function validateFiles(files) {
+    if (files.length === 0) {
+        throw new Error('Please select at least one file to upload.');
+    }
+
+    for (const file of files) {
+        if (!ALLOWED_FILE_TYPES.has(file.type)) {
+            throw new Error(`File "${file.name}" is not a supported image type. Please only upload JPG, JPEG, PNG, or TIFF files.`);
+        }
+
+        // Optional: Add file size validation if needed
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+            throw new Error(`File "${file.name}" is too large. Maximum file size is 50MB.`);
+        }
+    }
+    return true;
+}
+
 // Form submission
 async function handleFormSubmit(e) {
     e.preventDefault();
     const formData = new FormData(this);
     formData.append('date_range', dateRange.value);
 
-    disableForm();
-    startLoadingAnimation("Verifying");
-    await requestWakeLock();
-
     try {
+        const files = fileInput.files;
+        validateFiles(files);
+
+        disableForm();
+        startLoadingAnimation("Verifying");
+        await requestWakeLock();
+
         // First, verify the Turnstile
         await verifyTurnstile(formData);
         stopLoadingAnimation("Uploading");
@@ -102,6 +132,15 @@ async function handleFormSubmit(e) {
         handleError(error);
     }
 }
+
+fileInput.addEventListener('change', (e) => {
+    try {
+        validateFiles(e.target.files);
+    } catch (error) {
+        alert(error.message);
+        e.target.value = ''; // Clear the file input
+    }
+});
 
 async function verifyTurnstile(formData) {
     const response = await fetch('/verify-turnstile', {

@@ -116,9 +116,9 @@ class ImageOrganizer:
 
     def get_scan_file_paths(self):
         image_files = []
-        image_extensions = ('.jpg', '.jpeg', '.png', '.tiff', '.JPG')
+        image_extensions = ('.jpg', '.jpeg', '.png', '.tiff')
         for file in os.listdir(self.scans_path):
-            if file.endswith(image_extensions):
+            if file.lower().endswith(image_extensions):
                 image_files.append(os.path.join(self.scans_path, file))
         return image_files
 
