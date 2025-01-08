@@ -202,7 +202,6 @@ input[type="checkbox"] {
 
 
 /* Popup styles */
-/* Popup styles */
 .popup {
     display: none; /* Hidden by default */
     position: fixed;
@@ -216,30 +215,80 @@ input[type="checkbox"] {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 10px; /* Added padding for smaller screens */
 }
 
 .popup-content {
     background-color: white;
-    padding: 20px;
+    padding: 15px; /* Reduced padding */
     border-radius: 8px;
     text-align: center;
     max-width: 500px;
     width: 100%; /* Ensures the content doesn't exceed max width */
     margin: 0 auto;
+    font-size: 14px; /* Adjusted font size */
+    line-height: 1.5; /* Adjusted line height */
+}
+
+.popup-content h2 {
+    font-size: 18px; /* Adjusted heading size */
+}
+
+.popup-content ul {
+    list-style: none; /* Removed bullet points */
+    padding-left: 0; /* Removed padding */
+    font-size: 14px; /* Adjusted font size */
+}
+
+.popup-content ul li {
+    margin-bottom: 10px; /* Adjusted margin for list items */
+    position: relative;
+    padding-left: 20px; /* Space for custom icon */
+}
+
+.popup-content ul li::before {
+    content: '•'; /* Custom bullet point */
+    position: absolute;
+    left: 0;
+    color: #4caf50; /* Custom bullet color */
+    font-size: 20px; /* Custom bullet size */
+    line-height: 1; /* Align bullet with text */
 }
 
 .popup-btn {
     background-color: #4caf50;
     color: white;
-    padding: 10px 20px;
+    padding: 8px 16px; /* Reduced padding */
     margin: 10px 5px;
     border: none;
     cursor: pointer;
     border-radius: 5px;
+    font-size: 14px; /* Adjusted font size */
 }
 
 .popup-btn:hover {
     background-color: #45a049;
+}
+
+@media (max-width: 600px) {
+    .popup-content {
+        padding: 10px; /* Further reduced padding for smaller screens */
+        font-size: 12px; /* Further adjusted font size */
+    }
+
+    .popup-content h2 {
+        font-size: 16px; /* Further adjusted heading size */
+    }
+
+    .popup-content ul {
+        padding-left: 15px; /* Further adjusted padding for bullet points */
+        font-size: 12px; /* Further adjusted font size */
+    }
+
+    .popup-btn {
+        padding: 6px 12px; /* Further reduced padding */
+        font-size: 12px; /* Further adjusted font size */
+    }
 }
 
 .date-images .scan-images {
