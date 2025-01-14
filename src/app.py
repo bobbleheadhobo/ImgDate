@@ -22,7 +22,7 @@ log = setup_logger("WebServer", "../log/webserver.log")
 # Configuration
 UPLOAD_FOLDER = '../img/web/uploads'
 PROCESSED_FOLDER = '../img/web/processed'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
@@ -52,11 +52,13 @@ def delayed_file_deletion(file_path, delay=360):
 def index():
     return render_template('index.html')
 
+@app.route('/processes', methods=['GET'])
+def processes():
+    active_processes = {batch_id: batch for batch_id, batch in s.batches.items() if batch['status'] == 'processing'}
+    return jsonify(active_processes), 200
+
 @app.route('/verify-turnstile', methods=['POST'])
 def verify_turnstile():
-    log.info(f"Request received from IP: {request.headers.get('CF-Connecting-IP')}")
-    log.info(f"User Agent: {request.headers.get('User-Agent')}")
-    log.info(f"Referrer: {request.referrer}")
     
     turnstile_response = request.form.get('cf-turnstile-response')
     visitor_ip = request.headers.get('CF-Connecting-IP')
@@ -77,13 +79,6 @@ def start_upload():
 
     batch_id = str(uuid.uuid4())
     
-    log.info(s)
-    # log.info(s.batches)
-    log.info(s.num_images)
-    log.info(s.current_image_num)
-    log.info(s.date_format)
-    log.info(s.date_range)
-    
     
     # Create a temporary directory to store uploaded files
     temp_dir = tempfile.mkdtemp()
@@ -93,6 +88,9 @@ def start_upload():
         'status': 'started',
         'files': [],
         'temp_dir': temp_dir,
+        'IP': request.headers.get('CF-Connecting-IP'),
+        'User-Agent': request.headers.get('User-Agent'),
+        'Referrer': request.referrer,
         'options': {
             'date_format': request.form.get('date_format'),
             'date_range': request.form.get('date_range'),
@@ -126,12 +124,13 @@ def get_status(batch_id):
         current_time = time.time()
         
         # If the batch is older than 15 minutes, consider it failed
-        if current_time - batch.get('last_updated', current_time) > 15:
+        if current_time - batch.get('start_time', current_time) > 15 * 60:  # 15 minutes in seconds
+            log.info(f"Current time: {current_time}, "
+                    f"Start time: {batch.get('start_time', current_time)}, "
+                    f"Time difference: {current_time - batch.get('start_time', current_time)}")
+            
             batch['status'] = 'failed'
             batch['error'] = 'Process timed out'
-
-        # Update the last_updated timestamp
-        batch['last_updated'] = current_time
         
         return jsonify({
             'status': batch['status'],
@@ -167,6 +166,7 @@ def download(batch_id):
 def process_images(batch_id, temp_dir, form):
     batch = s.batches[batch_id]
     batch['status'] = 'processing'
+    batch['start_time'] = time.time()
 
     log.info("\n\n\n-----------------------------------")
     log.info(f"Processing batch {batch_id}")
@@ -219,7 +219,8 @@ def process_images(batch_id, temp_dir, form):
             temp_dir = batch.get('temp_dir')
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
-
+                log.info(f"Deleted temporary directory: {temp_dir}")
+                
         # Apply prefix to processed images if provided
         prefix = form.get('file_prefix', '').strip()
         if prefix:
@@ -249,7 +250,6 @@ def process_images(batch_id, temp_dir, form):
                         
         log.info(f"Processed {processed_count} images successfully")
         log.info("Finished processing request")
-
         batch['status'] = 'completed'
         batch['processed_count'] = processed_count
 
