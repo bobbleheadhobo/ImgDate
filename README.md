@@ -1,7 +1,7 @@
 # ImgDate: Automated Photo Digitization
 
 ## Description
-ImgDate is a powerful Python-based tool designed to streamline the process of digitizing and organizing printed photographs. It automates the tasks of cropping, date extraction, orientation correction, and metadata management for scanned images, making it an invaluable asset for preserving and cataloging personal or professional photo collections.
+ImgDate is a powerful Python-based tool designed to streamline the process of digitizing and organizing printed photographs. It can automatically crop, read date stamps, and sort images making it an invaluable for film photography.
 
 ## Main Features
 - **Automatic Image Cropping**: Crops multiple images from a single scan
@@ -9,7 +9,7 @@ ImgDate is a powerful Python-based tool designed to streamline the process of di
 - **Metadata Management**: Updates EXIF data with extracted dates on the images
 - **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition (requires dlib)
 - **Date Editor**: Easily update the EXIF data of photos manually for the ones that the script failed to process
-- **Intelligent File Organization**: Sorts processed images into folders by year and month
+- **File Organization**: Sorts processed images into folders by year and month
 - **Multi-threading Support**: Enhances processing speed for large batches of images
 - **Web Interface**: User-friendly browser interface for easy image processing and date editing
 
@@ -58,7 +58,7 @@ ImgDate is a powerful Python-based tool designed to streamline the process of di
 
 ## Usage
 
-### 1. Web Interface (Recommended)
+### 1. Web Interface
 The simplest way to use ImgDate is through its web interface:
 
 1. Start the web server:
@@ -69,7 +69,7 @@ The simplest way to use ImgDate is through its web interface:
 2. Open your web browser and navigate to `http://localhost:5000`
 
 ### 2. Command Line Interface
-For users who want quicker processing times and more features:
+For users who want quicker processing times and have lots of images:
 
 1. Place your scanned images in the `img/unprocessed` folder
 2. Run one of the following commands:
@@ -84,7 +84,7 @@ For users who want quicker processing times and more features:
    python main.py process
    ```
 3. Processed images will be saved in the `img/processed` folder by default
-4. Customize ImgDate's behavior by modifying the parameters in the `ImageOrganizer` class initialization:
+4. Customize ImgDate's behavior by modifying the parameters in main.py:
 
    ```python
    image_organizer = ImageOrganizer(
@@ -96,7 +96,8 @@ For users who want quicker processing times and more features:
        date_images=True, 
        fix_orientation=True,
        archive_scans=True,
-       sort_images=True
+       sort_images=True,
+       draw_contours=True
    )
    ```
 
@@ -109,4 +110,4 @@ For users who want quicker processing times and more features:
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-[Add your chosen license here]
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
