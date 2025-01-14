@@ -41,12 +41,9 @@ ImgDate is a powerful Python-based tool designed to streamline the process of di
    pip install -r requirements.txt
    ```
 
-4. Set up your OpenAI API key:
-   - Create a `.env` file in the project root
-   - Add your OpenAI API key:
-     ```
-     OPENAI_API_KEY=your_api_key_here
-     ```
+4. Add your API keys in .env_copy
+   - Enter the needed keys
+   - Rename the file to .env
 
 ### Troubleshooting Installation
 - If you encounter issues installing dlib, make sure you have Python 64-bit installed
