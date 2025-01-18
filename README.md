@@ -1,7 +1,7 @@
 # ImgDate: Automated Photo Digitization
 
 ## Description
-ImgDate is a powerful Python-based tool designed to streamline the process of digitizing and organizing printed photographs. It can automatically crop, read date stamps, and sort images making it an invaluable for film photography.
+ImgDate is a powerful Python-based tool designed to streamline the digitization and organization of printed photographs. It can automatically crop, read date stamps, and sort images, making it invaluable for film photography.
 
 ## Main Features
 - **Automatic Image Cropping**: Crops multiple images from a single scan
@@ -79,6 +79,10 @@ For users who want quicker processing times and have lots of images:
 
    # Process images and then open editor for failed detections
    python main.py process
+
+   # Flags:
+   # -d to delete all images in the save path
+   # -c to draw contours around cropped images
    ```
 3. Processed images will be saved in the `img/processed` folder by default
 4. Customize ImgDate's behavior by modifying the parameters in main.py:
@@ -93,18 +97,19 @@ For users who want quicker processing times and have lots of images:
        date_images=True, 
        fix_orientation=True,
        archive_scans=True,
-       sort_images=True,
-       draw_contours=True
+       sort_images=True
    )
+
+   date_editor = ImageDateEditor(source_folder_path="..\img\processes\Failed")
    ```
 
 ## Important Notes
 - For accurate date detection, ensure dates appear in:
-  - Top right corner for landscape images
-  - Top left corner for portrait images
+  - Bottom right corner for landscape images
+  - Bottom left corner for portrait images
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](COPYING.txt) file for details.
