@@ -2,6 +2,7 @@
 *.jpg
 *.png
 *.zip
+.vscode/
 
 
 # Byte-compiled / optimized / DLL files
