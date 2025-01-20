@@ -63,7 +63,7 @@ The simplest way to use ImgDate is through its web interface:
    python app.py
    ```
 
-2. Open your web browser and navigate to `http://localhost:5000`
+2. Open your web browser and navigate to `http://localhost:8888`
 
 ### 2. Command Line Interface
 For users who want quicker processing times and have lots of images:
