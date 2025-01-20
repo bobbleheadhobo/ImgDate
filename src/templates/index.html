@@ -41,7 +41,7 @@
             <label><input type="radio" name="date_format" value="universal"> Both</label>
             <hr>
             <div class="date-range-container">
-                <label for="dateRange">Select range of dates from your images (optional):</label>
+                <label for="dateRange">Select range of dates from your images (recommended):</label>
                 <input type="text" id="dateRange" name="date_range" placeholder="Select date range">
             </div>
         </div>
@@ -88,6 +88,7 @@
         <div class="scan-images">
             <img src="{{ url_for('static', filename='images/scan.jpg') }}" alt="scan example" title="Scan example">
         </div> 
+        <p><strong>The images in your scans must be on a pure white background.</strong></p>
         <button id="nextButton" class="popup-btn">Next</button>
     </div>
 </div>

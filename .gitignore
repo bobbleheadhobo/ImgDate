@@ -1,9 +1,13 @@
 #project specific
 *.jpg
 *.png
+*.jpeg
 *.zip
 .vscode/
 *.bat
+!/src/static/images/
+!/src/static/images/*.jpg
+!/src/static/images/*.png
 
 
 # Byte-compiled / optimized / DLL files
