@@ -354,3 +354,68 @@ label {
     margin-bottom: 10px;
     color: #555;
 }
+/* Desktop buy button */
+.bmc-button {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    background-color: #FFDD00;
+    color: #000000;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'Lato', sans-serif;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.bmc-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.bmc-button:active {
+    transform: scale(0.98);
+}
+
+.emoji {
+    font-size: 20px;
+}
+
+/* Mobile buy button - similar to GitHub button style */
+.bmc-button-mobile {
+    position: absolute;
+    top: 50px; /* Place it below GitHub logo */
+    right: 10px; /* Align with GitHub logo */
+    background-color: #FFDD00;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+    border: none;
+    text-decoration: none;
+    z-index: 1000;
+}
+
+.bmc-button-mobile:hover {
+    transform: scale(1.05);
+}
+
+/* Show/hide logic based on screen size */
+@media (max-width: 768px) {
+    .bmc-button {
+        display: none; /* Hide desktop button on mobile */
+    }
+    
+    .bmc-button-mobile {
+        display: flex; /* Show mobile button */
+    }
+}
