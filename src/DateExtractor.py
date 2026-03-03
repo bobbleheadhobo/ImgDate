@@ -26,7 +26,7 @@ class DateExtractor:
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.FINE_TUNED_MODEL = os.getenv('FINE_TUNED_MODEL')
         
-        self.log = setup_logger("DateExtractor", "..\log\ImgDate.log")
+        self.log = setup_logger("DateExtractor", "../log/ImgDate.log")
 
     def crop_date_64(self, img, base_64 = True):
         """

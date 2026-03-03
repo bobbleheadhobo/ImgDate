@@ -15,7 +15,7 @@ from LoggerConfig import setup_logger
 import SharedVariables as shared
 
 class ImageOrganizer:
-    def __init__(self, scans_path=r"..\img\unprocessed", save_path=r"..\img\processed", error_path=r"..\img\processed\Failed", archive_path=r"..\img\archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False):
+    def __init__(self, scans_path="../img/unprocessed", save_path="../img/processed", error_path="../img/processed/Failed", archive_path="../img/archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -33,7 +33,7 @@ class ImageOrganizer:
         self.s.current_image_num = 0
 
         self.lock = Lock()  # For thread safety
-        self.log = setup_logger("ImageOrganizer", "..\log\ImgDate.log")
+        self.log = setup_logger("ImageOrganizer", "../log/ImgDate.log")
 
         os.makedirs(save_path, exist_ok=True)
         os.makedirs(error_path, exist_ok=True)
@@ -255,30 +255,30 @@ class ImageOrganizer:
         if date is not None:
             formatted_date = date.replace('/', '-')
             if confidence < 9:
-                file_path = rf"{self.error_path}\date_{formatted_date}_confidence-{confidence}.jpg"
+                file_path = os.path.join(self.error_path, f"date_{formatted_date}_confidence-{confidence}.jpg")
                 self.log.warning(f"Low confidence ({confidence}) for date {date}. Saving to failed location")
                 return self.duplicate_check(file_path)
-            
+
             if self.sort_images:
                 year, month_name = self.extract_year_month(date)
                 self.ensure_directories_exist(year, month_name)
                 if self.date_images:
-                    file_path = rf"{self.save_path}\{year}\{month_name}\date_{formatted_date}.jpg"
+                    file_path = os.path.join(self.save_path, year, month_name, f"date_{formatted_date}.jpg")
                     return self.duplicate_check(file_path)
                 else:
-                    filepath = rf"{self.save_path}\{year}\{month_name}\{original_filename}"
+                    filepath = os.path.join(self.save_path, year, month_name, original_filename)
                     return self.duplicate_check(filepath)
-            
+
             # Not sorting images
             else:
                 if self.date_images:
-                    file_path = rf"{self.save_path}\date_{formatted_date}.jpg"
+                    file_path = os.path.join(self.save_path, f"date_{formatted_date}.jpg")
                     return self.duplicate_check(file_path)
                 else:
-                    file_path = rf"{self.save_path}\{original_filename}"
+                    file_path = os.path.join(self.save_path, original_filename)
                     return self.duplicate_check(file_path)
         else:
-            file_path = rf"{self.error_path}\date_not_found.jpg"
+            file_path = os.path.join(self.error_path, "date_not_found.jpg")
             return self.duplicate_check(file_path)
         
     def  duplicate_check(self, file_path):
@@ -344,9 +344,9 @@ class ImageOrganizer:
 
 if __name__ == "__main__":
     # Example usage
-    scans_path = r"..\img\test\skewed"
-    save_path = r"..\img\processed"
-    error_path = rf"{save_path}\Failed"
+    scans_path = "../img/test/skewed"
+    save_path = "../img/processed"
+    error_path = os.path.join(save_path, "Failed")
 
     # Delete files and folders in save path directory recursively
     shutil.rmtree(save_path)

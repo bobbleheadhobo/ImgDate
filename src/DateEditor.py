@@ -21,7 +21,7 @@ class ImageDateEditor:
         self.current_index = 0
         self.magnifier_size = 200  # Size of the magnifier
         self.zoom_factor = 3  # How much to zoom in
-        self.log = setup_logger("DateEditor", "..\log\ImgDate.log")
+        self.log = setup_logger("DateEditor", "../log/ImgDate.log")
 
     def setup_gui(self):
         self.log.info("Starting date editor")

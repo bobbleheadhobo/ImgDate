@@ -14,7 +14,7 @@ def main():
     
 
     args = parser.parse_args()
-    log = setup_logger("Main", "..\log\ImgDate.log")
+    log = setup_logger("Main", "../log/ImgDate.log")
 
 
 
@@ -33,11 +33,11 @@ def main():
 
     start_time = time.time()
     
-    base_path = r"C:\Users\super\OneDrive\Desktop\scans\not dated\processed\temp\temp"
-    scans_path = rf"{base_path}"
-    save_path = rf"{base_path}\processed"
-    error_path = rf"{save_path}\Failed"
-    archive_path = rf"{scans_path}\Archive"
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'img')
+    scans_path = os.path.join(base_path, 'unprocessed')
+    save_path = os.path.join(base_path, 'processed')
+    error_path = os.path.join(save_path, 'Failed')
+    archive_path = os.path.join(save_path, 'archive')
 
     image_organizer = ImageOrganizer(save_path=save_path,
                                      scans_path=scans_path,

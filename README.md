@@ -8,52 +8,65 @@ ImgDate is a powerful Python-based tool designed to streamline the digitization 
 - **Date Extraction**: Employs GPT-4 Vision to extract dates from scanned photos
 - **Metadata Management**: Updates EXIF data with extracted dates on the images
 - **Orientation Correction**: Automatically detects and corrects the orientation of photos using facial recognition (requires dlib)
-- **Date Editor**: Easily update the EXIF data of photos manually for the ones that the script failed to process
 - **File Organization**: Sorts processed images into folders by year and month
 - **Multi-threading Support**: Enhances processing speed for large batches of images
-- **Web Interface**: User-friendly browser interface for easy image processing and date editing
+- **Web Interface**: User-friendly browser interface for easy image processing
 
 ## Prerequisites
-- Python 3.8 or higher
-- Windows operating system (for Visual Studio Build Tools)
+- Python 3.10 or higher
+- Linux (Fedora/RHEL/Ubuntu)
 - OpenAI API key
-- 64-bit Python installation (required for dlib)
 
 ## Installation
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/bobbleheadhobo/ImgDate.git
    cd ImgDate
    ```
 
-2. Install Microsoft Visual Studio Build Tools (required for dlib):
-   - Download Visual Studio Build Tools from [Microsoft's website](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-   - Run the installer
-   - Select "Desktop development with C++"
-   - Make sure the following components are checked:
-     - MSVC Build Tools
-     - Windows 10 SDK
-     - C++ CMake tools for Windows
-   - Click Install
+2. Install system dependencies (required to build dlib from source):
+   ```bash
+   # Fedora / RHEL / CentOS
+   sudo dnf install -y cmake gcc gcc-c++ python3-devel
 
-3. Install required dependencies:
+   # Ubuntu / Debian
+   sudo apt install -y cmake gcc g++ python3-dev
+   ```
+
+3. Create and activate a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+4. Install required Python dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Add your API keys in .env_copy
-   - Enter the needed keys
-   - Rename the file to .env
+5. Add your API keys:
+   - Copy `.env_copy` to `.env`
+   - Fill in the required keys
+
+6. Download the dlib face landmark model (required for orientation correction):
+   ```bash
+   # Download and extract into the src/ directory
+   wget http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
+   bzip2 -d shape_predictor_5_face_landmarks.dat.bz2
+   mv shape_predictor_5_face_landmarks.dat src/
+   ```
 
 ### Troubleshooting Installation
-- If you encounter issues installing dlib, make sure you have Python 64-bit installed
-- After installing Visual Studio Build Tools, you may need to restart your computer
-- If the pip install still fails, you can try installing dlib separately first:
-  ```bash
-  pip install dlib
-  ```
+- If `pip install dlib` fails, ensure `cmake`, `gcc`, `gcc-c++`, and `python3-devel` are installed first
 
 ## Usage
+
+Activate the venv, then run commands from the `src/` directory:
+```bash
+source venv/bin/activate
+cd src
+```
 
 ### 1. Web Interface
 The simplest way to use ImgDate is through its web interface:
@@ -74,10 +87,7 @@ For users who want quicker processing times and have lots of images:
    # Process and organize images automatically
    python main.py organize
 
-   # Open the date editor for manually editing dates
-   python main.py edit
-
-   # Process images and then open editor for failed detections
+   # Process images without organizing into folders
    python main.py process
 
    # Flags:
@@ -85,22 +95,20 @@ For users who want quicker processing times and have lots of images:
    # -c to draw contours around cropped images
    ```
 3. Processed images will be saved in the `img/processed` folder by default
-4. Customize ImgDate's behavior by modifying the parameters in main.py:
+4. Customize ImgDate's behavior by modifying the parameters in `main.py`:
 
    ```python
    image_organizer = ImageOrganizer(
-       scans_path=r"..\img\unprocessed",
-       save_path=r"..\img\processed",
-       error_path=r"..\img\processed\Failed",
-       archive_path=r"..\img\processed\archive",
+       scans_path="../img/unprocessed",
+       save_path="../img/processed",
+       error_path="../img/processed/Failed",
+       archive_path="../img/processed/archive",
        crop_images=True,
-       date_images=True, 
+       date_images=True,
        fix_orientation=True,
        archive_scans=True,
        sort_images=True
    )
-
-   date_editor = ImageDateEditor(source_folder_path="..\img\processes\Failed")
    ```
 
 ## Important Notes

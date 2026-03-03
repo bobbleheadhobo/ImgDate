@@ -16,7 +16,7 @@ from ImageOrganizer import ImageOrganizer  # Assuming image_organizer is a modul
 from dotenv import load_dotenv
 from LoggerConfig import setup_logger
 
-log = setup_logger("FileWatcher", "..\log\ImgDate.log")
+log = setup_logger("FileWatcher", "../log/ImgDate.log")
 check_time = 60
 start_time = 100
 timeout = 600  # 10 minutes

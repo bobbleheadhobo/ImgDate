@@ -8,7 +8,7 @@ class AutoCrop:
         self.current_image = 0
         self.draw_contours = draw_contours
         self.save_path = save_path
-        self.log = setup_logger("AutoCrop", "..\log\ImgDate.log")
+        self.log = setup_logger("AutoCrop", "../log/ImgDate.log")
 
     def crop_and_straighten(self, image):
 
