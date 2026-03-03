@@ -84,11 +84,8 @@ For users who want quicker processing times and have lots of images:
 1. Place your scanned images in the `img/unprocessed` folder
 2. Run one of the following commands:
    ```bash
-   # Process and organize images automatically
+   # Process images in the unprocessed folder
    python main.py organize
-
-   # Process images without organizing into folders
-   python main.py process
 
    # Flags:
    # -d to delete all images in the save path
