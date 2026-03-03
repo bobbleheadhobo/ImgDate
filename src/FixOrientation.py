@@ -4,8 +4,10 @@ import os
 import numpy as np
 import time
 
+_DEFAULT_PREDICTOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'shape_predictor_5_face_landmarks.dat')
+
 class FixOrientation:
-    def __init__(self, predictor_path='shape_predictor_5_face_landmarks.dat'):
+    def __init__(self, predictor_path=_DEFAULT_PREDICTOR):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(predictor_path)
 
@@ -108,14 +110,10 @@ class FixOrientation:
             print(f"Average processing time per image: {avg_time:.2f} seconds")
 
 if __name__ == "__main__":
-    # input_folder = r'..\img\processed'
-    # output_folder = r'..\img\processed\corrected'
-    
-    input_folder = r'C:\Users\super\OneDrive\Desktop\processed\processed'
-    output_folder = r'C:\Users\super\OneDrive\Desktop\processed\corrected1'
+    input_folder = "../img/unprocessed"
+    output_folder = "../img/processed/corrected"
 
-    predictor_path = 'shape_predictor_5_face_landmarks.dat'
-    corrector = FixOrientation(predictor_path)
+    corrector = FixOrientation()
     
     start_time = time.time()
     corrector.process_images_in_folder(input_folder, output_folder)

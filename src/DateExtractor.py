@@ -14,15 +14,16 @@ import requests
 class DateExtractor:
 
     def __init__(self):
-        # Check if .env file exists
-        if not os.path.isfile('../.env'):
-            raise Exception(".env file not found.")
-    
+        # Locate .env relative to this file regardless of working directory
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+        if not os.path.isfile(env_path):
+            raise Exception(f".env file not found. Expected at: {os.path.abspath(env_path)}")
+
         self.crop_height = 0.8
         self.crop_width = 0.70
         self.MIN_YEAR = 1985
-        
-        load_dotenv()
+
+        load_dotenv(env_path)
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.FINE_TUNED_MODEL = os.getenv('FINE_TUNED_MODEL')
         
@@ -231,7 +232,7 @@ class DateExtractor:
 
 if __name__ == "__main__":
     # Example usage
-    image_path = r"..\debug\cropped_image_2_5.jpg"
+    image_path = "../img/unprocessed/example.jpg"
     image = cv2.imread(image_path)
 
     date_extractor = DateExtractor()

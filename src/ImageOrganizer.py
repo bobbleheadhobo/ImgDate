@@ -43,6 +43,7 @@ class ImageOrganizer:
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "../log/ImgDate.log")
 
+        os.makedirs(scans_path, exist_ok=True)
         os.makedirs(save_path, exist_ok=True)
         os.makedirs(error_path, exist_ok=True)
         os.makedirs(archive_path, exist_ok=True)

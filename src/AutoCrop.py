@@ -127,14 +127,14 @@ class AutoCrop:
         return image    
 
 if __name__ == "__main__":
-    image_path = r"C:\Users\super\OneDrive\Documents\Code\img_date\img\unprocessed\00000001_4.jpg"
+    image_path = "../img/unprocessed/example.jpg"
 
     import shutil
-    save_path = r"..\img\processed"
+    save_path = "../img/processed"
     shutil.rmtree(save_path, ignore_errors=True)
     os.makedirs(save_path, exist_ok=True)
 
-    auto_crop = AutoCrop()
+    auto_crop = AutoCrop(save_path, draw_contours=False)
     cropped_images = auto_crop.crop_and_straighten(image_path)
     print(f"Detected {len(cropped_images)} images.")
     for i, img in enumerate(cropped_images):

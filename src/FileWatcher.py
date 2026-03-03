@@ -272,16 +272,17 @@ def main(directory_to_watch, save_path, error_path, archive_path, WEBHOOK):
 
 
 if __name__ == "__main__":
-    directory_to_watch = r"C:\Users\super\OneDrive\Pictures\test"
-    save_path = r"C:\Users\super\OneDrive\Pictures\digitizedfilm\processed"
-    error_path = r"C:\Users\super\OneDrive\Pictures\digitizedfilm\failed"
-    archive_path = r"C:\Users\super\OneDrive\Pictures\digitizedfilm\archive"
-    
-    # Check if .env file exists
-    if not os.path.isfile('../.env'):
-        raise Exception(".env file not found.")
+    _base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'img')
+    directory_to_watch = os.path.join(_base, 'unprocessed')
+    save_path = os.path.join(_base, 'processed')
+    error_path = os.path.join(save_path, 'Failed')
+    archive_path = os.path.join(save_path, 'archive')
 
-    load_dotenv()
+    _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+    if not os.path.isfile(_env_path):
+        raise Exception(f".env file not found. Expected at: {os.path.abspath(_env_path)}")
+
+    load_dotenv(_env_path)
     WEBHOOK = os.getenv('WEBHOOK')
 
     log.info(f"\n\n------------------------------\nStarting File Watcher\n------------------------------\n")
