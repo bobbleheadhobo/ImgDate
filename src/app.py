@@ -254,6 +254,10 @@ def process_images(batch_id, temp_dir, form):
         batch['processed_count'] = processed_count
 
 def check_turnstile(turnstile_response, visitor_ip):
+    if not TURNSTILE_KEY:
+        log.info("CF_TURNSTILE_KEY not set, skipping verification")
+        return True
+
     try:
         response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify',
             data={
