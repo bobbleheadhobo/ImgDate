@@ -122,7 +122,7 @@ class AutoCrop:
         
         if height > width:
             # Rotate the image by 90 degrees
-            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+            image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
     
         return image    
 

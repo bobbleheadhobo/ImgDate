@@ -49,14 +49,6 @@ ImgDate is a powerful Python-based tool designed to streamline the digitization 
    - Copy `.env_copy` to `.env`
    - Fill in the required keys
 
-6. Download the dlib face landmark model (required for orientation correction):
-   ```bash
-   # Download and extract into the src/ directory
-   wget http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
-   bzip2 -d shape_predictor_5_face_landmarks.dat.bz2
-   mv shape_predictor_5_face_landmarks.dat src/
-   ```
-
 ### Troubleshooting Installation
 - If `pip install dlib` fails, ensure `cmake`, `gcc`, `gcc-c++`, and `python3-devel` are installed first
 

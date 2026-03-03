@@ -17,6 +17,7 @@ app = Flask(__name__)
 
 load_dotenv()
 TURNSTILE_KEY = os.getenv('CF_TURNSTILE_KEY')
+TURNSTILE_SITE_KEY = os.getenv('CF_TURNSTILE_SITE_KEY', '')
 log = setup_logger("WebServer", "../log/webserver.log")
 
 # Configuration
@@ -50,7 +51,7 @@ def delayed_file_deletion(file_path, delay=360):
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    return render_template('index.html', turnstile_site_key=TURNSTILE_SITE_KEY)
 
 @app.route('/processes', methods=['GET'])
 def processes():
@@ -161,7 +162,8 @@ def download(batch_id):
         log.error(f"Error sending file: {str(e)}")
         return jsonify({'error': 'Failed to send file'}), 500
     finally:
-        delayed_file_deletion(zip_path)
+        # delayed_file_deletion(zip_path)
+        pass
 
 def process_images(batch_id, temp_dir, form):
     batch = s.batches[batch_id]
@@ -225,8 +227,8 @@ def process_images(batch_id, temp_dir, form):
         # Apply prefix to processed images if provided
         prefix = form.get('file_prefix', '').strip()
         if prefix:
-            for root, _, batch['files'] in os.walk(save_path):
-                for file in batch['files']:
+            for root, _, files_in_dir in os.walk(save_path):
+                for file in files_in_dir:
                     old_path = os.path.join(root, file)
                     new_filename = f"{prefix}_{file}"
                     new_path = os.path.join(root, new_filename)
@@ -237,16 +239,16 @@ def process_images(batch_id, temp_dir, form):
         zip_path = os.path.join(app.config['PROCESSED_FOLDER'], zip_filename)
         processed_count = 0
         with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for root, _, batch['files'] in os.walk(save_path):
-                for file in batch['files']:
-                    zipf.write(os.path.join(root, file), 
+            for root, _, files_in_dir in os.walk(save_path):
+                for file in files_in_dir:
+                    zipf.write(os.path.join(root, file),
                                os.path.relpath(os.path.join(root, file), save_path))
                     processed_count += 1
 
             if form.get('draw_contours') == 'true' and os.path.exists(contours_path):
-                for root, _, batch['files'] in os.walk(contours_path):
-                    for file in batch['files']:
-                        zipf.write(os.path.join(root, file), 
+                for root, _, files_in_dir in os.walk(contours_path):
+                    for file in files_in_dir:
+                        zipf.write(os.path.join(root, file),
                                    os.path.relpath(os.path.join(root, file), scans_path))
                         
         log.info(f"Processed {processed_count} images successfully")

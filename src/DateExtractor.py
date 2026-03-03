@@ -25,7 +25,7 @@ class DateExtractor:
 
         load_dotenv(env_path)
         self.api_key = os.getenv('OPENAI_API_KEY')
-        self.FINE_TUNED_MODEL = os.getenv('FINE_TUNED_MODEL')
+        self.FINE_TUNED_MODEL = os.getenv('MODEL_NAME')
         
         self.log = setup_logger("DateExtractor", "../log/ImgDate.log")
 
@@ -75,49 +75,52 @@ class DateExtractor:
 
     def read_date(self, base64_image, retries = 3):
         """
-        Use gpt4o API to extract text from the processed image.
+        Use OpenAI Responses API to extract text from the processed image.
         """
-    
+
         prompt = self.get_prompt()
 
         headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {self.api_key}"
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
         }
 
         payload = {
-        "model": self.FINE_TUNED_MODEL,
-        "messages": [
-            {
-            "role": "user",
-            "content": [
+            "model": self.FINE_TUNED_MODEL,
+            "messages": [
                 {
-                "type": "text",
-                "text": prompt
-                },
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}",
-                    "detail": "low"
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}",
+                                "detail": "low"
+                            }
+                        }
+                    ]
                 }
-                }
-            ]
-            }
-        ],
-        "max_tokens": 300
+            ],
+            "max_tokens": 300
         }
 
         for attempt in range(retries):
             try:
                 response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-                response.raise_for_status()  # Raise an HTTPError for bad responses
-                extracted_date = response.json()["choices"][0]["message"]["content"]
-                extracted_date = extracted_date.split("|")
-                confidence = extracted_date[1].strip().replace("confidence: ", "")
-                extracted_date = extracted_date[0].strip()
+                response.raise_for_status()
+                content = response.json()["choices"][0]["message"]["content"]
+                if "|" not in content:
+                    self.log.warning(f"Unexpected response format (no '|'): {content}")
+                    return content.strip(), -1
+                parts = content.split("|")
+                confidence = parts[1].strip().replace("confidence: ", "")
+                extracted_date = parts[0].strip()
                 return extracted_date, confidence
-            except requests.exceptions.RequestException as e:
+            except Exception as e:
                 self.log.error(f"Error extracting date (attempt {attempt + 1}/{retries}): {e}")
                 if attempt < retries - 1:
                     sleep(2 * attempt)  # Exponential backoff
