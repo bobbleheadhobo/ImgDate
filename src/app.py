@@ -162,8 +162,7 @@ def download(batch_id):
         log.error(f"Error sending file: {str(e)}")
         return jsonify({'error': 'Failed to send file'}), 500
     finally:
-        # delayed_file_deletion(zip_path)
-        pass
+        delayed_file_deletion(zip_path)
 
 def process_images(batch_id, temp_dir, form):
     batch = s.batches[batch_id]

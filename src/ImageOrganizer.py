@@ -28,6 +28,7 @@ class ImageOrganizer:
         self.sort_images = sort_images
         self.auto_crop = AutoCrop(scans_path, draw_contours)
         self.date_extractor = DateExtractor()
+        self.orientation = FixOrientation() if fix_orientation else None
 
         self.s = shared
         self.s.num_images = 0
@@ -85,11 +86,8 @@ class ImageOrganizer:
                 cropped_images = [scan]
 
             if cropped_images:
-                orientation = FixOrientation() if self.fix_orientation else None
                 for img in cropped_images:
                     if self.date_images:
-                        # date = "01/01/1985"  # Dummy date, replace with actual logic if needed
-                        # confidence = random.randint(-1, 20)  # Dummy confidence, replace with actual logic
                         date, confidence = self.date_extractor.extract_and_validate_date(img)
                         original_exif_data = None
                     else:
@@ -97,10 +95,9 @@ class ImageOrganizer:
                         date = "01/01/1111" # place holder date wont actually be used
                         original_exif_data = self.date_extractor.read_image_date(scan_path)
 
-
-                    if self.fix_orientation and confidence > 8:
+                    if self.orientation and confidence > 8:
                         try:
-                            img = orientation.process_image(img)
+                            img = self.orientation.process_image(img)
                         except Exception as e:
                             self.log.error(f"Error in FixOrientation: {e}")
 
@@ -166,7 +163,6 @@ class ImageOrganizer:
 
         img_data = None
         try:
-            # Load the image file with pyexiv2
             img_data = pyexiv2.Image(temp_filename)
             # img_data.read_exif()
 
@@ -227,7 +223,8 @@ class ImageOrganizer:
             else:
                 self.log.info(f"Kept original exif data")
         finally:
-            img_data.close()
+            if img_data:
+                img_data.close()
 
         # Rename the temporary file to the final filename
         try:

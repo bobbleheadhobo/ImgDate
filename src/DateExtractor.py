@@ -187,7 +187,11 @@ class DateExtractor:
             if not is_valid:
                 confidence = -1
 
-            return clean_date, int(confidence)
+            try:
+                return clean_date, int(float(confidence))
+            except (ValueError, TypeError):
+                self.log.warning(f"Could not parse confidence value: {confidence}")
+                return clean_date, 0
         else:
             self.log.error("No date extracted from the image.")
             return None, -1
@@ -223,7 +227,7 @@ class DateExtractor:
             exif_date['comment'] = img_data.read_comment()
             # If the date dictionary is empty, set it to None
             if not exif_date:
-                self.log.warn("No exif date found in image.")
+                self.log.warning("No exif date found in image.")
                 exif_date = None
             
         except KeyError as e:

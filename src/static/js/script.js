@@ -143,9 +143,11 @@ fileInput.addEventListener('change', (e) => {
 });
 
 async function verifyTurnstile(formData) {
+    const tokenOnly = new FormData();
+    tokenOnly.append('cf-turnstile-response', formData.get('cf-turnstile-response'));
     const response = await fetch('/verify-turnstile', {
         method: 'POST',
-        body: formData
+        body: tokenOnly
     });
 
     if (!response.ok) {
