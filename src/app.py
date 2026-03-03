@@ -135,8 +135,8 @@ def get_status(batch_id):
         return jsonify({
             'status': batch['status'],
             'error': batch.get('error'),
-            'current_image_num': s.current_image_num,
-            'num_images': s.num_images,
+            'current_image_num': batch.get('current_image_num', 0),
+            'num_images': batch.get('num_images', 0),
         }), 200
     else:
         return jsonify({'error': 'Batch not found'}), 404
@@ -201,7 +201,8 @@ def process_images(batch_id, temp_dir, form):
             fix_orientation=form.get('fix_orientation') == 'true',
             crop_images=form.get('crop_images') == 'true',
             date_images=form.get('date_images') == 'true',
-            draw_contours=form.get('draw_contours') == 'true'
+            draw_contours=form.get('draw_contours') == 'true',
+            batch_progress=batch
         )
 
         log.info("Options chosen:\n" + "\n".join(f"{k}={v}" for k, v in batch['options'].items()))

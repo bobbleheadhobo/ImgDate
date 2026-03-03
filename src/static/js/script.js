@@ -252,8 +252,10 @@ function handleVisibilityChange() {
         // Page is hidden, pause polling
         stopStatusPolling();
     } else {
-        // Page is visible again, resume polling
+        // Page is visible again, resume polling with a fresh interval
         if (batchId) {
+            pollInterval = 1000;
+            retryCount = 0;
             startStatusPolling();
         }
     }
@@ -294,7 +296,7 @@ function updateProgressBar(statusData) {
         document.getElementById('progressText').innerText = ``;
     }
     else {
-        log.error('Invalid number of images:', num_images);
+        console.error('Invalid number of images:', num_images);
     }
 }
 
@@ -349,32 +351,42 @@ function initializeApp() {
 }
 
 // Usage popup handling
-function showUsagePopup() {
-    const popup1 = document.getElementById('usagePopup1');
-    const popup2 = document.getElementById('usagePopup2');
+let popupListenersSetUp = false;
+
+function setupPopupListeners() {
+    if (popupListenersSetUp) return;
+    popupListenersSetUp = true;
+
     const nextButton = document.getElementById('nextButton');
     const okButton = document.getElementById('okButton');
     const dontShowAgainButton = document.getElementById('dontShowAgainButton');
 
-    if (popup1 && popup2 && nextButton && okButton && dontShowAgainButton) {
+    if (!nextButton || !okButton || !dontShowAgainButton) {
+        console.error('One or more popup elements were not found.');
+        return;
+    }
+
+    nextButton.addEventListener('click', () => {
+        document.getElementById('usagePopup1').style.display = 'none';
+        document.getElementById('usagePopup2').style.display = 'flex';
+    });
+
+    okButton.addEventListener('click', closePopups);
+
+    dontShowAgainButton.addEventListener('click', () => {
+        localStorage.setItem('hideUsagePopup', 'true');
+        closePopups();
+    });
+}
+
+function showUsagePopup() {
+    const popup1 = document.getElementById('usagePopup1');
+    const popup2 = document.getElementById('usagePopup2');
+
+    if (popup1 && popup2) {
+        setupPopupListeners();
         popup1.style.display = 'flex';
         popup2.style.display = 'none';
-
-        nextButton.addEventListener('click', () => {
-            popup1.style.display = 'none';
-            popup2.style.display = 'flex';
-        });
-
-        okButton.addEventListener('click', () => {
-            closePopups();
-        });
-
-        dontShowAgainButton.addEventListener('click', () => {
-            console.log('Don\'t show again clicked');
-            localStorage.setItem('hideUsagePopup', 'true');
-            console.log('hideUsagePopup set to:', localStorage.getItem('hideUsagePopup'));
-            closePopups();
-        });
     } else {
         console.error('One or more popup elements were not found.');
     }

@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import shutil
+import tempfile
 import cv2
 import calendar
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,7 +16,7 @@ from LoggerConfig import setup_logger
 import SharedVariables as shared
 
 class ImageOrganizer:
-    def __init__(self, scans_path="../img/unprocessed", save_path="../img/processed", error_path="../img/processed/Failed", archive_path="../img/archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False):
+    def __init__(self, scans_path="../img/unprocessed", save_path="../img/processed", error_path="../img/processed/Failed", archive_path="../img/archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False, batch_progress=None):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -32,6 +33,13 @@ class ImageOrganizer:
         self.s.num_images = 0
         self.s.current_image_num = 0
 
+        # Per-batch progress dict for the web server (avoids global state collisions
+        # when multiple batches are processed concurrently).
+        self._batch_progress = batch_progress
+        if self._batch_progress is not None:
+            self._batch_progress['num_images'] = 0
+            self._batch_progress['current_image_num'] = 0
+
         self.lock = Lock()  # For thread safety
         self.log = setup_logger("ImageOrganizer", "../log/ImgDate.log")
 
@@ -46,6 +54,8 @@ class ImageOrganizer:
         else:
             self.log.info(f"Found {len(scan_file_paths)} {'image' if len(scan_file_paths) == 1 else 'images'} to process.")
             self.s.num_images = len(scan_file_paths)
+            if self._batch_progress is not None:
+                self._batch_progress['num_images'] = len(scan_file_paths)
             
             
 
@@ -126,6 +136,8 @@ class ImageOrganizer:
         cropped_images = self.auto_crop.crop_and_straighten(scan)
         with self.lock:
             self.s.num_images += len(cropped_images)
+            if self._batch_progress is not None:
+                self._batch_progress['num_images'] = self.s.num_images
         return cropped_images
     
     def load_scan(self, scan_path):
@@ -143,8 +155,12 @@ class ImageOrganizer:
         # Convert the numpy array (OpenCV format) to a PIL Image
         pil_img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 
-        # Save PIL image with temp filename
-        temp_filename = 'temp_image.jpg'
+        # Save PIL image to a unique temp file in the destination directory to avoid
+        # collisions when multiple batches are processed concurrently.
+        dest_dir = os.path.dirname(os.path.abspath(filename))
+        os.makedirs(dest_dir, exist_ok=True)
+        temp_fd, temp_filename = tempfile.mkstemp(suffix='.jpg', dir=dest_dir)
+        os.close(temp_fd)
         pil_img.save(temp_filename, format="JPEG", quality=95)
 
         img_data = None
@@ -223,6 +239,8 @@ class ImageOrganizer:
             return False
         except Exception as e:
             self.log.error(f"An unexpected error occurred while renaming {temp_filename} to {filename}: {e}")
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
             return False
 
         #check if success
@@ -243,6 +261,8 @@ class ImageOrganizer:
                 self.log.error(f"Failed to update metadata or save image: {filename}")
 
             self.s.current_image_num += 1
+            if self._batch_progress is not None:
+                self._batch_progress['current_image_num'] = self._batch_progress.get('current_image_num', 0) + 1
             self.log.info(f"Image {self.s.current_image_num} of {self.s.num_images} processed\n")
             return success
 

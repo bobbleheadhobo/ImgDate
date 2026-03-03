@@ -53,7 +53,7 @@ class DateExtractor:
         return cropped_img
     
     def get_prompt(self):   
-        if not s.date_range.strip():
+        if not s.date_range or not s.date_range.strip():
             range = ""
         elif "to" in s.date_range:
             range = f" The range of date will be {s.date_range}. Any extracted dates not in this range should be re-evaluated."
