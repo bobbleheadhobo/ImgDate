@@ -13,7 +13,7 @@ import requests
 
 class DateExtractor:
 
-    def __init__(self):
+    def __init__(self, date_format=None, date_range=None):
         # Locate .env relative to this file regardless of working directory
         env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
         if not os.path.isfile(env_path):
@@ -22,6 +22,11 @@ class DateExtractor:
         self.crop_height = 0.8
         self.crop_width = 0.70
         self.MIN_YEAR = 1985
+
+        # Per-instance date options (used by the web server so concurrent batches
+        # don't share settings). None falls back to SharedVariables for the CLI.
+        self.date_format = date_format
+        self.date_range = date_range
 
         load_dotenv(env_path)
         self.api_key = os.getenv('OPENAI_API_KEY')
@@ -54,22 +59,25 @@ class DateExtractor:
         return cropped_img
     
     def get_prompt(self):   
-        if not s.date_range or not s.date_range.strip():
+        date_range = self.date_range if self.date_range is not None else s.date_range
+        date_format = self.date_format if self.date_format is not None else s.date_format
+
+        if not date_range or not date_range.strip():
             range = ""
-        elif "to" in s.date_range:
-            range = f" The range of date will be {s.date_range}. Any extracted dates not in this range should be re-evaluated."
+        elif "to" in date_range:
+            range = f" The range of date will be {date_range}. Any extracted dates not in this range should be re-evaluated."
         else:
-            range = f" The date of the images will be on {s.date_range}. Any extracted dates not on this given date should be re-evaluated."
+            range = f" The date of the images will be on {date_range}. Any extracted dates not on this given date should be re-evaluated."
             
-        if not s.date_format:
+        if not date_format:
             self.log.error("Error setting prompt: date_format not set.")
             return f'''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12).{range} Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
         
-        if s.date_format == 'mm_dd_yy':
+        if date_format == 'mm_dd_yy':
             return f'''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'mm dd yy'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., 8 9 '12).{range} Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "mm dd 'yy". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
-        if s.date_format == 'yy_mm_dd':
+        if date_format == 'yy_mm_dd':
             return f'''Extract the date from the image where it is displayed in orange dot-matrix text in the format 'yy mm dd'. The date appears as two digits for the month, day, and year, with the year shown as two digits (e.g., '12 8 9).{range} Focus on recognizing the orange dot-matrix numbers in the lower corner of the image and return the date as "'yy mm dd". Please read the date and provide it in the format MM DD 'YY. Respond only with the date and a confidence level from 1 to 10 on how certain you are of its accuracy. Example "12 07 '01 | confidence: 10". If the date is unclear or cannot be read, please respond with "date not found | confidence: -1" as a placeholder.'''
-        if s.date_format == 'universal':
+        if date_format == 'universal':
             return f'''This film image contains a date, typically displayed in orange or red dot-matrix text. The date will be in one of two formats: "'YY MM DD" or "MM DD 'YY". The year will always begin with an apostrophe (') to differentiate between these formats.{range} It is your job to identify the correct date format accurately. Please read the date and return it in the format "MM DD 'YY". Respond only with the date and a confidence level from 1 to 10 based on how certain you are of its accuracy. Example: "12 07 '01 | confidence: 10". If the date is unclear or unreadable, respond with "date not found | confidence: -1" as a placeholder.'''
             
 
@@ -110,7 +118,7 @@ class DateExtractor:
 
         for attempt in range(retries):
             try:
-                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=60)
                 response.raise_for_status()
                 content = response.json()["choices"][0]["message"]["content"]
                 if "|" not in content:

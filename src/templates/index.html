@@ -7,7 +7,7 @@
     <title>Img Date</title>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr-4.6.13/flatpickr.min.css') }}">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 
@@ -76,7 +76,7 @@
     </form>
 
     <!-- Flatpickr JS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{{ url_for('static', filename='vendor/flatpickr-4.6.13/flatpickr.min.js') }}"></script>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     
