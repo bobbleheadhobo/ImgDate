@@ -61,7 +61,7 @@ MAX_DATE_READS_PER_BATCH = int(os.getenv('MAX_DATE_READS_PER_BATCH', 300))  # ca
 MIN_FREE_DISK_GB = float(os.getenv('MIN_FREE_DISK_GB', 5))
 DOWNLOAD_EXPIRY_SECONDS = 60 * 60       # visitors' download links work for 1 hour
 FAILED_BATCH_RETENTION_SECONDS = 2 * 60 * 60
-ASSET_VERSION = '2'  # bump to bust cached JS/CSS after frontend changes
+ASSET_VERSION = '3'  # bump to bust cached JS/CSS after frontend changes
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['PROCESSED_FOLDER'] = PROCESSED_FOLDER
