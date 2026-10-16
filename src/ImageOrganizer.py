@@ -16,7 +16,7 @@ from LoggerConfig import setup_logger
 import SharedVariables as shared
 
 class ImageOrganizer:
-    def __init__(self, scans_path="../img/unprocessed", save_path="../img/processed", error_path="../img/processed/Failed", archive_path="../img/archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False, batch_progress=None, date_format=None, date_range=None, max_workers=10):
+    def __init__(self, scans_path="../img/unprocessed", save_path="../img/processed", error_path="../img/processed/Failed", archive_path="../img/archive", crop_images = True, date_images = True, fix_orientation = True, archive_scans = True, sort_images = True, draw_contours = False, batch_progress=None, date_format=None, date_range=None, max_workers=10, max_date_reads=None):
         self.scans_path = scans_path
         self.save_path = save_path
         self.error_path = error_path
@@ -29,6 +29,9 @@ class ImageOrganizer:
         self.auto_crop = AutoCrop(scans_path, draw_contours)
         self.date_extractor = DateExtractor(date_format=date_format, date_range=date_range)
         self.max_workers = max_workers
+        # Limit on OpenAI date reads (None = unlimited); images past it are saved as undated
+        self.max_date_reads = max_date_reads
+        self.date_reads = 0
         self.orientation = FixOrientation() if fix_orientation else None
 
         self.s = shared
@@ -88,8 +91,11 @@ class ImageOrganizer:
 
             if cropped_images:
                 for img in cropped_images:
-                    if self.date_images:
+                    if self.date_images and self.reserve_date_read():
                         date, confidence = self.date_extractor.extract_and_validate_date(img)
+                        original_exif_data = None
+                    elif self.date_images:
+                        date, confidence = None, -1
                         original_exif_data = None
                     else:
                         confidence = 10
@@ -110,6 +116,13 @@ class ImageOrganizer:
         except Exception as e:
             self.log.error(f"Error processing {scan_path}: {e}")
 
+
+    def reserve_date_read(self):
+        with self.lock:
+            if self.max_date_reads is not None and self.date_reads >= self.max_date_reads:
+                return False
+            self.date_reads += 1
+            return True
 
     def move_scan_to_archive(self, scan_path):
         """
