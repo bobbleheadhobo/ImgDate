@@ -111,15 +111,10 @@ async function handleFormSubmit(e) {
         validateFiles(files);
 
         disableForm();
-        startLoadingAnimation("Verifying");
+        startLoadingAnimation("Uploading");
         await requestWakeLock();
 
-        // First, verify the Turnstile
-        await verifyTurnstile(formData);
-        stopLoadingAnimation("Uploading");
-        startLoadingAnimation("Uploading");;
-
-        // If verification succeeds, start the upload
+        // The server verifies the Turnstile token before accepting the upload
         await startUpload(formData);
         stopLoadingAnimation("Processing");
         startLoadingAnimation("Processing");
@@ -142,30 +137,30 @@ fileInput.addEventListener('change', (e) => {
     }
 });
 
-async function verifyTurnstile(formData) {
-    const tokenOnly = new FormData();
-    tokenOnly.append('cf-turnstile-response', formData.get('cf-turnstile-response'));
-    const response = await fetch('/verify-turnstile', {
-        method: 'POST',
-        body: tokenOnly
-    });
-
-    if (!response.ok) {
-        if (response.status === 403) {
-            throw new Error('Human verification failed. Please reload and try again.');
-        }
-        throw new Error(`Turnstile verification failed: ${response.status}`);
-    }
-}
-
 async function startUpload(formData) {
     const response = await fetch('/start-upload', {
         method: 'POST',
+        // Sent as a header so the server can check it before reading the upload body
+        headers: { 'X-Turnstile-Token': formData.get('cf-turnstile-response') || '' },
         body: formData
     });
 
     if (!response.ok) {
-        throw new Error(`Upload start failed: ${response.status}`);
+        if (response.status === 403) {
+            throw new Error('Human verification failed. Please try again.');
+        }
+        if (response.status === 413) {
+            throw new Error('Upload is too large.');
+        }
+        if (response.status === 429) {
+            throw new Error('Too many uploads. Please wait a while and try again.');
+        }
+        let message = `Upload start failed: ${response.status}`;
+        try {
+            const data = await response.json();
+            if (data.error) message = data.error;
+        } catch (_) { /* non-JSON error body */ }
+        throw new Error(message);
     }
 
     const data = await response.json();
@@ -247,6 +242,10 @@ function handleError(error) {
     console.error('Error:', error);
     stopStatusPolling();
     resetForm();
+    // Turnstile tokens are single use, so get a fresh one for the next attempt
+    if (window.turnstile) {
+        window.turnstile.reset();
+    }
 }
 
 function handleVisibilityChange() {

@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Img Date</title>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css', v=asset_version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr-4.6.13/flatpickr.min.css') }}">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 </head>
 
@@ -35,7 +35,7 @@
         </div>
 
         <div id="dateOptionsBox" class="options-box" style="display: none;">
-            <h3>Date Settings</h3>
+            <h2>Date Settings</h2>
             <div class="date-notice-container">
                 <p class="date-notice">Date must be in bottom right corner for landscape photos</p>
                 <p class="date-notice">Date must be in bottom left corner for portrait photos</p>
@@ -76,9 +76,9 @@
     </form>
 
     <!-- Flatpickr JS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{{ url_for('static', filename='vendor/flatpickr-4.6.13/flatpickr.min.js') }}"></script>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js', v=asset_version) }}"></script>
     
     <a href="https://www.buymeacoffee.com/imgdate" target="_blank" class="bmc-button">
         <span class="emoji">🍺</span>

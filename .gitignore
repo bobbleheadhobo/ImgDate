@@ -9,6 +9,11 @@
 !/src/static/images/*.jpg
 !/src/static/images/*.png
 
+# Core dumps (contain process memory: API keys, uploaded images)
+/core
+/src/core
+core.[0-9]*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
